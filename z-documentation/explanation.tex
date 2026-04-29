@@ -1,0 +1,278 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[top=2.2cm,bottom=2.2cm,left=2.5cm,right=2.5cm]{geometry}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{fancyhdr}
+\usepackage{setspace}
+\usepackage{parskip}
+
+\definecolor{primary}{RGB}{13,71,161}
+\definecolor{light}{RGB}{227,242,253}
+\definecolor{codebg}{RGB}{245,245,245}
+\definecolor{codeblue}{RGB}{13,71,161}
+\definecolor{codegreen}{RGB}{27,94,32}
+
+\hypersetup{colorlinks=true, linkcolor=primary, urlcolor=primary}
+
+\titleformat{\section}{\large\bfseries\color{primary}}{\thesection}{0.8em}{}[\color{primary}\titlerule]
+\titleformat{\subsection}{\normalsize\bfseries\color{black}}{\thesubsection}{0.6em}{}
+\titlespacing{\section}{0pt}{14pt}{4pt}
+\titlespacing{\subsection}{0pt}{8pt}{2pt}
+
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  backgroundcolor=\color{codebg},
+  keywordstyle=\color{codeblue}\bfseries,
+  commentstyle=\color{codegreen},
+  frame=single, framerule=0.3pt, rulecolor=\color{primary!40},
+  breaklines=true, numbers=none,
+  xleftmargin=6pt, xrightmargin=6pt,
+  aboveskip=6pt, belowskip=6pt
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{gray}ADIA --- Technical Design Document}
+\fancyhead[R]{\small\color{gray}v1.0}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0.3pt}
+
+\setstretch{1.1}
+\setlist[itemize]{noitemsep, topsep=3pt, leftmargin=1.4em}
+\setlist[enumerate]{noitemsep, topsep=3pt, leftmargin=1.8em}
+
+% ─────────────────────────────────────────────────────────
+\begin{document}
+
+% ── TITLE ────────────────────────────────────────────────
+\begin{center}
+  {\LARGE\bfseries\color{primary} Autonomous Data Intelligence Agent}\\[4pt]
+  {\large\color{gray} Technical Design Document \quad|\quad v1.0 \quad|\quad April 2025}\\[2pt]
+  \textit{\small For internal developer use}
+\end{center}
+\noindent\color{primary}\rule{\linewidth}{1pt}\color{black}
+
+% ── ABSTRACT ─────────────────────────────────────────────
+\section{Abstract}
+
+ADIA is a tool-augmented LLM agent that lets users query a relational database, get analytical insights, trigger automated actions, and receive chart-based explanations --- all via natural language. It combines an LLM planning layer with deterministic backend tools so responses are grounded in real data, not model memory.
+
+% ── INTRODUCTION ─────────────────────────────────────────
+\section{Introduction}
+
+\textbf{Problem.} Traditional analytics requires manual SQL, static dashboards, and human interpretation. Non-technical users cannot self-serve; analysts become bottlenecks.
+
+\textbf{Solution.} ADIA acts as a \textit{Digital Employee}: it understands intent, queries the database, reasons about the results, triggers business actions, and explains findings in plain English --- autonomously.
+
+\textbf{Core capabilities:}
+\begin{itemize}
+  \item Natural language $\rightarrow$ SQL query execution
+  \item Insight generation (trend analysis, anomaly detection)
+  \item Autonomous action triggering (alerts, conditional rules)
+  \item Chart generation with plain-English explanation
+  \item Session-based conversational memory
+  \item Retrieval-Augmented Generation (RAG) over business documents
+\end{itemize}
+
+% ── SYSTEM OVERVIEW ──────────────────────────────────────
+\section{System Overview \& Architecture}
+
+ADIA is a \textbf{five-layer system}. The LLM only plans and synthesises; all data access and computation is done by deterministic tools.
+
+\begin{lstlisting}[language={}]
+  [ Client / REST API  (FastAPI)           ]
+           |
+  [ Agent Layer  (LLM Planner)             ]
+           |
+  [ Tool Layer                             ]
+    SQL Engine | Insight | Action | Viz | RAG
+           |
+  [ Memory / Context Layer                 ]
+    Session Store  |  FAISS Vector Index
+           |
+  [ Database Layer                         ]
+    SQLite (structured)  |  Document Store
+\end{lstlisting}
+
+\textbf{Request lifecycle:}
+\begin{enumerate}
+  \item Client sends natural language query via \texttt{POST /query}.
+  \item API loads session history and injects DB schema into the LLM prompt.
+  \item LLM classifies intent and produces an ordered tool-execution plan.
+  \item Tools execute (SQL $\to$ Insight $\to$ Action $\to$ Viz $\to$ RAG as needed).
+  \item LLM synthesises all tool outputs into a final response.
+  \item Interaction is saved to session memory; JSON response is returned.
+\end{enumerate}
+
+% ── CORE COMPONENTS ──────────────────────────────────────
+\section{Core Components}
+
+\subsection{API Layer --- FastAPI}
+Stateless REST interface. Validates input via Pydantic, routes to the Agent Layer.
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Endpoint} & \textbf{Purpose} \\
+\midrule
+\texttt{POST /query}       & Submit a natural language query \\
+\texttt{POST /action}      & Define a conditional business rule \\
+\texttt{POST /visualise}   & Request a chart for a query \\
+\texttt{GET  /history}     & Fetch session conversation history \\
+\texttt{POST /rag/ingest}  & Upload documents for RAG indexing \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Agent Layer --- LLM Orchestrator}
+Uses the \textbf{ReAct} (Reasoning + Acting) pattern. At each step the LLM produces a \textit{Thought}, selects an \textit{Action} (tool call), observes the result, and decides whether to call another tool or return a final answer.
+
+\begin{lstlisting}[language=Python]
+def agent_loop(query, context, tools):
+    prompt = build_prompt(query, context.history, tool_descriptions)
+    for _ in range(MAX_STEPS):
+        thought, action = llm.plan(prompt)
+        if action.type == "FINISH":
+            return action.answer
+        observation = tools[action.name].run(action.args)
+        prompt = extend_prompt(prompt, thought, action, observation)
+\end{lstlisting}
+
+\subsection{SQL Execution Engine}
+Generates SQL from natural language, validates it (read-only), executes against SQLite, and retries up to 2 times on error by feeding the error back to the LLM.
+
+\textit{Safety:} Only \texttt{SELECT} allowed. Row cap: 10,000. Timeout: 30s.
+
+\subsection{Insight Engine}
+Runs multiple SQL queries and computes: period-over-period deltas, Z-score anomalies, and comparative rankings. Uses \texttt{pandas} and \texttt{scipy}. Invoked when intent is \textit{analytical} rather than just \textit{retrieval}.
+
+\subsection{Action Engine}
+Evaluates user-defined rules: fetch metric $\to$ compare to threshold $\to$ execute action. Conditions are evaluated by Python, never the LLM.
+
+\begin{lstlisting}[language=Python]
+# Example rule
+{ "metric": "monthly_revenue", "operator": "<",
+  "threshold": 50000, "action": "alert" }
+\end{lstlisting}
+
+\subsection{Visualisation Engine}
+Picks an appropriate chart type (line, bar, pie, scatter), renders it with \textbf{Matplotlib}, and returns the image path alongside a 2--3 sentence LLM-generated explanation.
+
+\subsection{RAG Retriever}
+Documents are chunked $\to$ embedded (sentence-transformers) $\to$ stored in FAISS. On query, the top-5 nearest chunks are retrieved and injected into the LLM prompt as supporting context.
+
+\subsection{Memory / Context Layer}
+In-memory session dictionary keyed by session UUID. Stores the last $N=10$ turns. Older turns are compressed into a summary to stay within the LLM token budget.
+
+% ── AGENT WORKFLOW ───────────────────────────────────────
+\section{Agent Workflow}
+
+\begin{enumerate}
+  \item \textbf{Intent classification} --- LLM labels the query as one of: \texttt{DATA\_RETRIEVAL}, \texttt{INSIGHT\_ANALYSIS}, \texttt{ACTION\_TRIGGER}, \texttt{VISUALISATION}, \texttt{RAG\_QUERY}.
+  \item \textbf{Plan generation} --- LLM outputs an ordered list of tool calls.
+  \item \textbf{Tool execution loop} --- Tools run sequentially; each output is appended to the context before the next step.
+  \item \textbf{Response synthesis} --- LLM combines all observations into a plain-English answer with numbers, trends, and action outcomes.
+  \item \textbf{Persist} --- Query + response saved to session store.
+\end{enumerate}
+
+% ── EXAMPLE USE CASE ─────────────────────────────────────
+\section{Example Use Case}
+
+\textbf{Query:} \textit{``Why did revenue drop last month?''}
+
+\textbf{Step 1 --- SQL Engine} runs two queries:
+\begin{lstlisting}[language=SQL]
+-- Current month
+SELECT SUM(revenue) FROM sales WHERE sale_date BETWEEN '2025-03-01' AND '2025-03-31';
+-- Result: 128400
+
+-- Previous month
+SELECT SUM(revenue) FROM sales WHERE sale_date BETWEEN '2025-02-01' AND '2025-02-28';
+-- Result: 136900
+\end{lstlisting}
+
+\textbf{Step 2 --- Insight Engine} computes: overall drop = \$8,500 ($-$6.2\%). Breakdown by category reveals Electronics fell 24.2\% --- primary driver.
+
+\textbf{Step 3 --- RAG Retriever} finds a passage in the Q1 Board Report citing supply chain delays and a new competitor launch in Electronics.
+
+\textbf{Final response:}
+\begin{lstlisting}[language={}]
+Revenue fell 6.2% in March vs February (-$8,500).
+Primary cause: Electronics category dropped 24.2% (-$13,100).
+Factors (from Board Report): supply chain delays on X12 Pro
+model + competitor launch at 15% lower price on March 5th.
+Recommendation: targeted Q2 promotional campaign for Electronics.
+\end{lstlisting}
+
+% ── TECHNOLOGY STACK ─────────────────────────────────────
+\section{Technology Stack}
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Component} & \textbf{Technology} & \textbf{Why} \\
+\midrule
+API framework    & FastAPI         & Async, auto-docs, Pydantic validation \\
+LLM layer        & LangChain       & Model-agnostic, tool-use abstractions \\
+Database         & SQLite          & Zero-config, portable, SQL-92 \\
+Vector store     & FAISS           & Fast nearest-neighbour search \\
+Embeddings       & sentence-transformers & Local, no API cost \\
+Data analysis    & pandas + scipy  & DataFrames, stats, anomaly detection \\
+Visualisation    & Matplotlib      & Programmatic, full layout control \\
+Validation       & Pydantic v2     & Schema enforcement at API boundary \\
+Language         & Python 3.11+    & Ecosystem, async support \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ── DESIGN PRINCIPLES ────────────────────────────────────
+\section{Design Principles}
+
+\begin{itemize}
+  \item \textbf{LLM plans; tools compute.} All arithmetic, SQL execution, and condition checks are done by deterministic code --- never by the LLM. This eliminates numerical hallucination.
+  \item \textbf{Read-only safety.} The SQL Engine rejects any non-\texttt{SELECT} statement before execution.
+  \item \textbf{Modularity.} Each tool exposes one \texttt{run()} method and has no knowledge of other tools --- independently testable and swappable.
+  \item \textbf{Graceful degradation.} On tool failure the agent returns a structured error rather than fabricating an answer.
+  \item \textbf{Stateless API.} The API layer holds no state; session state lives in the Memory Layer, enabling horizontal scaling behind a load balancer.
+\end{itemize}
+
+% ── LIMITATIONS ──────────────────────────────────────────
+\section{Limitations}
+
+\begin{itemize}
+  \item \textbf{LLM SQL errors:} The model may generate valid SQL with wrong semantics (bad join key, wrong date range). Mitigated by schema injection and error-retry loops.
+  \item \textbf{SQLite concurrency:} Write-locking limits multi-user throughput. Migrate to PostgreSQL for production.
+  \item \textbf{In-memory session store:} Sessions lost on restart. Replace with Redis for persistence.
+  \item \textbf{FAISS flat index:} $O(n)$ search degrades on large corpora; switch to IVF/HNSW for $>$100K chunks.
+  \item \textbf{Action Engine v1.0:} Supports log and in-memory alert only; email/Slack planned for v1.1.
+\end{itemize}
+
+% ── FUTURE ENHANCEMENTS ──────────────────────────────────
+\section{Future Enhancements}
+
+\begin{itemize}
+  \item \textbf{v1.1:} React dashboard UI; email/Slack/webhook alerts; scheduled rule evaluation.
+  \item \textbf{v1.2:} Kafka/Kinesis streaming data ingestion for real-time metrics.
+  \item \textbf{v2.0:} Multi-agent architecture (coordinator + specialist sub-agents); forecasting engine (Prophet/ARIMA); multi-database federation via DuckDB.
+\end{itemize}
+
+% ── CONCLUSION ───────────────────────────────────────────
+\section{Conclusion}
+
+ADIA transforms a passive relational database into an intelligent, conversational analytics system. The separation of LLM reasoning from deterministic tool execution is its key engineering decision: it makes the system reliable enough to trust with business-critical queries while remaining flexible enough to handle open-ended natural language. The modular architecture means any layer --- the LLM provider, the database, the vector store --- can be swapped without rebuilding the system.
+
+\vspace{0.8cm}
+\noindent\color{primary}\rule{\linewidth}{0.5pt}\color{gray}
+\begin{center}
+  \small ADIA TDD v1.0 \quad|\quad System Architecture Team \quad|\quad April 2025
+\end{center}
+
+\end{document}
