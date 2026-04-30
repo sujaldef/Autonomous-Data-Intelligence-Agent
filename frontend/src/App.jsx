@@ -14,7 +14,6 @@ import HistoryPage from './pages/projects/history';
 import AnalyticsPage from './pages/projects/analytics';
 import NotificationsPage from './pages/projects/notifications';
 import Navbar from './components/navbar';
-
 function AppShell() {
   const { pathname } = useLocation();
   const showNavbar = pathname !== '/' && !pathname.startsWith('/auth');
