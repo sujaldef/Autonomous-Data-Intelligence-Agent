@@ -1,117 +1,68 @@
 import React from 'react';
-import {
-  Clock3,
-  RotateCcw,
-  ExternalLink,
-  Search,
-  FileText,
-} from 'lucide-react';
-
-const historyItems = [
-  {
-    query: 'Show monthly revenue growth for 2024',
-    project: 'Q4 Revenue Analysis',
-    timestamp: '2 mins ago',
-    status: 'Success',
-    summary: 'Revenue increased 14.2% in Q1 with the strongest lift in March.',
-  },
-  {
-    query: 'Summarize customer complaints from the latest logs',
-    project: 'Customer Feedback Engine',
-    timestamp: '1 hour ago',
-    status: 'Success',
-    summary:
-      'Top themes were latency, missing exports, and onboarding friction.',
-  },
-  {
-    query: 'Compare inventory counts across stores',
-    project: 'Inventory Audit 2024',
-    timestamp: 'Yesterday',
-    status: 'Draft',
-    summary: 'The audit identified variance in two warehouse locations.',
-  },
-];
+import { Search, Filter, Database, ArrowUpRight, Clock, FileText, Activity } from 'lucide-react';
 
 const HistoryPage = () => {
+  const historyItems = [
+    { id: 1, query: "Show me the monthly revenue growth for 2024", time: "14:20", date: "Oct 24", project: "Revenue", type: "Hybrid", status: "Complete" },
+    { id: 2, query: "List all users who churned in the last 30 days", time: "09:15", date: "Oct 23", project: "Churn", type: "SQL", status: "Complete" },
+    { id: 3, query: "What are common complaints in feedback logs?", time: "16:45", date: "Oct 22", project: "Feedback", type: "RAG", status: "Complete" },
+  ];
+
   return (
-    <div className="space-y-6">
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-              <Clock3 size={16} className="text-indigo-600" />
-              History
-            </div>
-            <h2 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
-              Past queries and outcomes
-            </h2>
-            <p className="mt-2 text-sm text-slate-600">
-              Search, review, or re-run previous work without leaving the
-              project shell.
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <div className="relative">
-              <Search
-                size={16}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-              />
-              <input
-                type="text"
-                placeholder="Search history"
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-10 py-3 text-sm outline-none transition-colors placeholder:text-slate-400 focus:border-indigo-300 focus:bg-white sm:w-72"
-              />
-            </div>
-            <button className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50">
-              <RotateCcw size={16} />
-              Refresh
-            </button>
-          </div>
+    <div className="p-8">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-xl font-bold text-white tracking-tight">Intelligence History</h1>
+          <p className="text-xs text-slate-500 uppercase font-black tracking-widest mt-1">Audit Trail & Neural Logs</p>
         </div>
-      </section>
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" size={14} />
+            <input placeholder="Search logs..." className="bg-white/5 border border-white/10 rounded-xl py-2 pl-9 pr-4 text-xs focus:ring-1 focus:ring-cyan-500/50 outline-none w-64 transition-all" />
+          </div>
+          <button className="p-2 bg-white/5 border border-white/10 rounded-xl text-slate-400 hover:text-white transition-all">
+            <Filter size={18} />
+          </button>
+        </div>
+      </div>
 
-      <section className="space-y-4">
-        {historyItems.map((item) => (
-          <article
-            key={item.query}
-            className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
-          >
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div className="space-y-3">
-                <div className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                  {item.project}
-                </div>
-                <h3 className="text-lg font-semibold tracking-tight text-slate-950">
-                  {item.query}
-                </h3>
-                <p className="max-w-3xl text-sm leading-6 text-slate-600">
-                  {item.summary}
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3 lg:flex-col lg:items-end">
-                <span
-                  className={`rounded-full px-3 py-1 text-xs font-semibold ${item.status === 'Success' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}
-                >
-                  {item.status}
-                </span>
-                <p className="text-sm text-slate-500">{item.timestamp}</p>
-              </div>
-            </div>
-
-            <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-4 text-sm text-slate-600">
-              <span className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-1">
-                <FileText size={14} /> Query result saved
-              </span>
-              <button className="inline-flex items-center gap-2 font-semibold text-indigo-700 hover:text-indigo-800">
-                Open details
-                <ExternalLink size={14} />
-              </button>
-            </div>
-          </article>
-        ))}
-      </section>
+      <div className="bg-[#050912] border border-white/5 rounded-2xl overflow-hidden shadow-2xl">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-white/[0.02] border-b border-white/5">
+              <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Execution Log</th>
+              <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Origin</th>
+              <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Engine</th>
+              <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-white/5">
+            {historyItems.map((item) => (
+              <tr key={item.id} className="hover:bg-white/[0.01] transition-colors group">
+                <td className="px-6 py-5">
+                  <p className="text-sm font-bold text-slate-200 truncate max-w-md group-hover:text-cyan-400 transition-colors">{item.query}</p>
+                  <div className="flex items-center gap-3 mt-1.5 text-[10px] text-slate-500 font-bold uppercase tracking-tighter">
+                    <span className="flex items-center gap-1"><Clock size={10} /> {item.date} • {item.time}</span>
+                    <span className="text-emerald-500 flex items-center gap-1"><Activity size={10} /> {item.status}</span>
+                  </div>
+                </td>
+                <td className="px-6 py-5">
+                  <span className="text-[10px] font-black bg-slate-800 text-slate-300 px-2 py-1 rounded border border-white/5 uppercase tracking-widest">{item.project}</span>
+                </td>
+                <td className="px-6 py-5 flex items-center gap-2">
+                  <Database size={14} className="text-indigo-500" />
+                  <span className="text-xs font-medium text-slate-400">{item.type}</span>
+                </td>
+                <td className="px-6 py-5 text-right">
+                  <button className="p-2 text-slate-500 hover:text-white transition-all">
+                    <ArrowUpRight size={18} />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };

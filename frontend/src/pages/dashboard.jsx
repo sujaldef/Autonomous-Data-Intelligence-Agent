@@ -1,205 +1,167 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Database, 
-  Activity, 
-  Settings, 
-  Plus, 
-  User,
-  LayoutDashboard,
-  Server,
-  Clock,
-  ChevronRight,
+import { motion } from 'framer-motion';
+import {
+  Activity,
+  ArrowUpRight,
+  Database,
+  Plus,
+  Settings,
   Search,
-  Box
+  Cpu,
+  Zap,
+  ShieldCheck,
+  LayoutGrid,
+  Filter,
+  MoreVertical
 } from 'lucide-react';
 
-const Dashboard = () => {
-  const user = {
-    name: "Alex Rivera",
-    email: "alex.r@adia-systems.ai",
-    role: "Senior Data Analyst",
-    projectsCount: 4
-  };
+const projects = [
+  { id: 1, name: 'Q4 Revenue Analysis', routeId: 'q4-revenue-analysis', sources: ['SQL', 'RAG'], status: 'Active', lastActivity: '2 mins ago', glow: 'shadow-emerald-500/10 border-emerald-500/20' },
+  { id: 2, name: 'Customer Feedback Engine', routeId: 'customer-feedback-engine', sources: ['MongoDB', 'RAG'], status: 'Processing', lastActivity: '1 hour ago', glow: 'shadow-violet-500/10 border-violet-500/20' },
+  { id: 3, name: 'Inventory Audit 2024', routeId: 'inventory-audit-2024', sources: ['SQL'], status: 'Completed', lastActivity: 'Yesterday', glow: 'shadow-sky-500/10 border-sky-500/20' },
+  { id: 4, name: 'Churn Prediction Model', routeId: 'churn-prediction-model', sources: ['SQL', 'CSV'], status: 'Idle', lastActivity: '3 days ago', glow: 'shadow-slate-500/10 border-slate-500/20' },
+];
 
-  const projects = [
-    {
-      id: 1,
-      routeId: 'q4-revenue-analysis',
-      name: "Q4 Revenue Analysis",
-      sources: ["SQL", "RAG"],
-      status: "Active",
-      lastActivity: "2 mins ago",
-      accent: "text-blue-400",
-      glow: "shadow-blue-500/10"
-    },
-    {
-      id: 2,
-      routeId: 'customer-feedback-engine',
-      name: "Customer Feedback Engine",
-      sources: ["MongoDB", "RAG"],
-      status: "Processing",
-      lastActivity: "1 hour ago",
-      accent: "text-purple-400",
-      glow: "shadow-purple-500/10"
-    },
-    {
-      id: 3,
-      routeId: 'inventory-audit-2024',
-      name: "Inventory Audit 2024",
-      sources: ["SQL"],
-      status: "Completed",
-      lastActivity: "Yesterday",
-      accent: "text-emerald-400",
-      glow: "shadow-emerald-500/10"
-    },
-    {
-      id: 4,
-      routeId: 'churn-prediction-model',
-      name: "Churn Prediction Model",
-      sources: ["SQL", "CSV"],
-      status: "Idle",
-      lastActivity: "3 days ago",
-      accent: "text-slate-400",
-      glow: "shadow-slate-500/10"
-    }
+const Dashboard = () => {
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const stats = [
+    { label: 'Agent Uptime', value: '99.9%', icon: Zap, color: 'text-amber-400' },
+    { label: 'Active Queries', value: '1,284', icon: Cpu, color: 'text-indigo-400' },
+    { label: 'Data Synced', value: '4.2 TB', icon: Database, color: 'text-cyan-400' },
+    { label: 'Security Status', value: 'Verified', icon: ShieldCheck, color: 'text-emerald-400' },
   ];
 
   return (
-    <div className="min-h-screen bg-[#0a0a0c] text-slate-200 font-sans selection:bg-indigo-500/30">
-      {/* Sidebar / Nav Overlay (Optional Visual) */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        
-        {/* --- Top Profile Header --- */}
-        <header className="relative overflow-hidden bg-slate-900/40 border border-white/5 rounded-3xl p-8 mb-10">
-          <div className="absolute top-0 right-0 p-8 opacity-10">
-            <Box size={120} />
-          </div>
-          
-          <div className="relative flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-6">
-              <div className="relative group">
-                <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full blur opacity-40 group-hover:opacity-75 transition duration-1000"></div>
-                <div className="relative h-20 w-20 bg-slate-900 rounded-full flex items-center justify-center border border-white/10">
-                  <User size={40} className="text-indigo-400" />
-                </div>
-              </div>
-              <div>
-                <div className="flex items-center gap-3">
-                  <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
-                    Welcome, {user.name.split('')[0]}
-                  </h1>
-                  <span className="bg-indigo-500/10 text-indigo-400 text-[10px] px-2 py-0.5 rounded-full border border-indigo-500/20 uppercase tracking-widest font-semibold">Pro</span>
-                </div>
-                <p className="text-slate-400 mt-1 flex items-center gap-2">
-                  <span className="text-indigo-400 font-medium">{user.role}</span>
-                  <span className="w-1 h-1 rounded-full bg-slate-700"></span>
-                  {user.email}
-                </p>
-              </div>
-            </div>
+    <div className="min-h-screen bg-[#020617] text-slate-200 font-sans selection:bg-cyan-500/30">
+      {/* Background Ambient Glow */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-indigo-500/5 blur-[120px] rounded-full" />
+        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-cyan-500/5 blur-[120px] rounded-full" />
+      </div>
 
-            <div className="flex items-center gap-3 w-full md:w-auto">
-              <div className="relative flex-grow md:flex-grow-0">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                <input 
-                  type="text" 
-                  placeholder="Search projects..." 
-                  className="w-full md:w-64 bg-slate-950/50 border border-white/5 rounded-xl py-2.5 pl-10 pr-4 focus:outline-none focus:border-indigo-500/50 transition-all text-sm"
-                />
+      <div className="relative z-10 mx-auto max-w-7xl px-6 py-10">
+        
+        {/* --- Top Section: Profile & Identity --- */}
+        <header className="flex flex-col md:flex-row md:items-center justify-between mb-12 gap-6">
+          <div className="flex items-center gap-5">
+            <div className="relative group">
+              <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-indigo-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
+              <div className="relative h-14 w-14 rounded-2xl bg-slate-900 border border-white/10 flex items-center justify-center overflow-hidden">
+                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Alex" alt="Avatar" className="h-12 w-12" />
               </div>
-              <button className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl transition-all font-semibold shadow-lg shadow-indigo-600/20">
-                <Plus size={18} />
-                <span className="hidden sm:inline">New Project</span>
-              </button>
             </div>
+            <div>
+              <h1 className="text-2xl font-bold text-white tracking-tight">Alex Rivera</h1>
+              <p className="text-slate-500 text-sm font-medium tracking-wide">Senior Data Intelligence Analyst</p>
+            </div>
+          </div>
+
+          {/* --- KPI Row --- */}
+          <div className="grid grid-cols-2 md:flex items-center gap-4 md:gap-8 bg-white/5 border border-white/10 px-6 py-3 rounded-[2rem] backdrop-blur-sm">
+            {stats.map((stat, i) => (
+              <div key={i} className="flex flex-col md:items-center">
+                <span className="text-[10px] uppercase font-black tracking-widest text-slate-500 mb-1">{stat.label}</span>
+                <div className="flex items-center gap-2">
+                  <stat.icon size={14} className={stat.color} />
+                  <span className="text-sm font-bold text-white tracking-tight">{stat.value}</span>
+                </div>
+              </div>
+            ))}
           </div>
         </header>
 
-        {/* --- Key Metrics --- */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          {[
-            { label: 'Active Projects', val: user.projectsCount, icon: LayoutDashboard, color: 'text-blue-400' },
-            { label: 'Data Sources', val: '12', icon: Database, color: 'text-purple-400' },
-            { label: 'API Queries', val: '1.2k', icon: Server, color: 'text-emerald-400' },
-            { label: 'Avg. Latency', val: '24ms', icon: Activity, color: 'text-orange-400' },
-          ].map((stat, i) => (
-            <div key={i} className="bg-slate-900/30 border border-white/5 p-6 rounded-2xl hover:bg-slate-900/50 transition-colors group">
-              <div className="flex items-center justify-between mb-4">
-                <div className={`p-2 rounded-lg bg-slate-950 border border-white/5 ${stat.color}`}>
-                  <stat.icon size={20} />
-                </div>
-                <ChevronRight size={16} className="text-slate-600 group-hover:text-slate-400 transition-colors" />
-              </div>
-              <p className="text-slate-500 text-sm font-medium">{stat.label}</p>
-              <p className="text-2xl font-bold text-white mt-1">{stat.val}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* --- Projects Grid --- */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-3">
-            <h2 className="text-xl font-bold text-white">Active Pipelines</h2>
-            <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
+        {/* --- Action Bar: Search & Add Project --- */}
+        <section className="flex flex-col md:flex-row items-center gap-4 mb-10">
+          <div className="relative flex-grow group w-full">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-cyan-400 transition-colors" size={18} />
+            <input 
+              type="text" 
+              placeholder="Search projects, datasets, or neural logs..." 
+              className="w-full bg-white/5 border border-white/10 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500/50 transition-all placeholder:text-slate-600"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
-          <button className="text-sm text-slate-400 hover:text-indigo-400 transition-colors">View Archival</button>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {projects.map((project) => (
-            <Link
-              key={project.id} 
-              to={`/projects/${project.routeId}/query`}
-              className={`group bg-slate-900/40 rounded-2xl p-6 border border-white/5 hover:border-white/10 transition-all duration-300 hover:-translate-y-1 shadow-xl ${project.glow}`}
-            >
-              <div className="flex justify-between items-start mb-6">
-                <div className="flex flex-col gap-1">
-                  <h3 className="text-lg font-bold text-white group-hover:text-indigo-300 transition-colors line-clamp-1">{project.name}</h3>
-                  <div className="flex items-center gap-2 text-slate-500 text-xs">
-                    <Clock size={12} />
-                    <span>Updated {project.lastActivity}</span>
-                  </div>
-                </div>
-                <span className={`text-[10px] px-2.5 py-1 rounded-md font-bold uppercase tracking-wider bg-slate-950 border border-white/5 ${project.accent}`}>
-                  {project.status}
-                </span>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex flex-wrap gap-2">
-                  {project.sources.map(source => (
-                    <span key={source} className="flex items-center gap-1.5 text-xs bg-indigo-500/5 text-indigo-300/80 px-2.5 py-1 rounded-lg border border-indigo-500/10">
-                      <Database size={10} />
-                      {source}
-                    </span>
-                  ))}
-                </div>
-
-                <div className="pt-4 border-t border-white/5 flex items-center justify-between">
-                  <div className="flex -space-x-2">
-                    {[1, 2, 3].map(i => (
-                      <div key={i} className="h-7 w-7 rounded-full border-2 border-slate-900 bg-slate-800 flex items-center justify-center text-[10px] font-bold">
-                        {String.fromCharCode(64 + i)}
-                      </div>
-                    ))}
-                  </div>
-                  <button className="p-2 bg-slate-950 hover:bg-indigo-600 rounded-lg border border-white/5 transition-all text-slate-400 hover:text-white">
-                    <Settings size={18} />
-                  </button>
-                </div>
-              </div>
-            </Link>
-          ))}
           
-          {/* Create New Card (Ghost State) */}
-          <button className="border-2 border-dashed border-white/5 rounded-2xl p-6 flex flex-col items-center justify-center gap-3 text-slate-500 hover:text-indigo-400 hover:border-indigo-500/30 hover:bg-indigo-500/5 transition-all group">
-            <div className="p-3 rounded-full bg-slate-900 group-hover:scale-110 transition-transform">
-              <Plus size={24} />
-            </div>
-            <span className="font-medium">Initialize New Agent</span>
+          <div className="flex items-center gap-3 w-full md:w-auto">
+            <button className="flex-grow md:flex-grow-0 flex items-center justify-center gap-2 px-6 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-sm font-bold transition-all shadow-lg shadow-indigo-600/20 active:scale-95">
+              <Plus size={18} />
+              New Project
+            </button>
+            <button className="p-3.5 bg-white/5 border border-white/10 rounded-2xl text-slate-400 hover:text-white transition-all">
+              <Settings size={20} />
+            </button>
+          </div>
+        </section>
+
+        {/* --- Grid Header --- */}
+        <div className="flex items-center justify-between mb-6 px-2">
+          <div className="flex items-center gap-2">
+            <LayoutGrid size={16} className="text-cyan-400" />
+            <h2 className="text-xs uppercase font-black tracking-[0.2em] text-slate-400">Active Intelligence Workspace</h2>
+          </div>
+          <button className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-white transition-colors">
+            <Filter size={14} />
+            Filter by status
           </button>
         </div>
+
+        {/* --- Project Cards Grid --- */}
+        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {projects.map((project) => (
+            <motion.div
+              key={project.id}
+              whileHover={{ y: -5 }}
+              className="group"
+            >
+              <Link
+                to={`/projects/${project.routeId}/query`}
+                className={`flex flex-col h-full rounded-[2rem] border bg-slate-900/40 p-6 transition-all duration-300 shadow-xl ${project.glow} hover:bg-slate-900/60`}
+              >
+                <div className="flex justify-between items-start mb-6">
+                  <div className="h-10 w-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 group-hover:text-cyan-400 transition-colors">
+                    <Database size={20} />
+                  </div>
+                  <button className="text-slate-600 hover:text-white">
+                    <MoreVertical size={18} />
+                  </button>
+                </div>
+
+                <div className="flex-grow">
+                  <h3 className="text-lg font-bold text-white mb-2 group-hover:text-cyan-400 transition-colors leading-tight">
+                    {project.name}
+                  </h3>
+                  <div className="flex flex-wrap gap-2 mb-6">
+                    {project.sources.map((source) => (
+                      <span key={source} className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 bg-white/5 border border-white/10 rounded-lg text-slate-400">
+                        {source}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-5 border-t border-white/5 flex items-center justify-between">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] uppercase font-black text-slate-600 tracking-tighter mb-1">Status</span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md w-fit ${
+                      project.status === 'Active' ? 'bg-emerald-500/10 text-emerald-400' :
+                      project.status === 'Processing' ? 'bg-violet-500/10 text-violet-400 animate-pulse' :
+                      'bg-slate-500/10 text-slate-500'
+                    }`}>
+                      {project.status}
+                    </span>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="text-[10px] uppercase font-black text-slate-600 tracking-tighter mb-1">Activity</span>
+                    <span className="text-[10px] font-bold text-slate-400">{project.lastActivity}</span>
+                  </div>
+                </div>
+              </Link>
+            </motion.div>
+          ))}
+        </section>
       </div>
     </div>
   );

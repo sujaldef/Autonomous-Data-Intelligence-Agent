@@ -1,4 +1,10 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  useLocation,
+  Navigate,
+} from 'react-router-dom';
 import Landing from './pages/landing';
 import LoginSignup from './pages/login_signup';
 import Dashboard from './pages/dashboard';
@@ -6,11 +12,16 @@ import ProjectLayout from './pages/projects/sidebar';
 import QueryPage from './pages/projects/querry';
 import HistoryPage from './pages/projects/history';
 import AnalyticsPage from './pages/projects/analytics';
-import { Navigate } from 'react-router-dom';
+import NotificationsPage from './pages/projects/notifications';
+import Navbar from './components/navbar';
 
-function App() {
+function AppShell() {
+  const { pathname } = useLocation();
+  const showNavbar = pathname !== '/' && !pathname.startsWith('/auth');
+
   return (
-    <BrowserRouter>
+    <>
+      {showNavbar ? <Navbar /> : null}
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/auth" element={<LoginSignup />} />
@@ -20,8 +31,17 @@ function App() {
           <Route path="query" element={<QueryPage />} />
           <Route path="history" element={<HistoryPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
+          <Route path="notifications" element={<NotificationsPage />} />
         </Route>
       </Routes>
+    </>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AppShell />
     </BrowserRouter>
   );
 }

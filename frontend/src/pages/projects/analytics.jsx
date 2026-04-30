@@ -1,160 +1,72 @@
 import React from 'react';
-import {
-  ArrowDownRight,
-  ArrowUpRight,
-  BarChart3,
-  CalendarDays,
-  Database,
-  Layers,
-  TrendingUp,
-} from 'lucide-react';
-
-const metrics = [
-  {
-    label: 'Total Revenue',
-    value: '$4.2M',
-    delta: '+12.5%',
-    isUp: true,
-    icon: TrendingUp,
-  },
-  {
-    label: 'Active Users',
-    value: '18.4k',
-    delta: '+3.2%',
-    isUp: true,
-    icon: BarChart3,
-  },
-  {
-    label: 'Latency',
-    value: '142ms',
-    delta: '-18%',
-    isUp: false,
-    icon: Layers,
-  },
-  {
-    label: 'Connected Sources',
-    value: '3',
-    delta: 'Live',
-    isUp: true,
-    icon: Database,
-  },
-];
-
-const analyticsBars = [54, 68, 62, 74, 88, 82, 96, 90, 104, 98, 114, 120];
+import { BarChart3, TrendingUp, Layers, Database, ArrowUpRight, Calendar } from 'lucide-react';
 
 const AnalyticsPage = () => {
+  const bars = [40, 55, 45, 60, 80, 70, 90, 85, 100, 95, 110, 115];
+
   return (
-    <div className="space-y-6">
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-              <BarChart3 size={16} className="text-indigo-600" />
-              Analytics
-            </div>
-            <h2 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
-              Project performance and connector usage
-            </h2>
-            <p className="mt-2 text-sm text-slate-600">
-              A compact overview of trends, connector mix, and recent signals.
-            </p>
-          </div>
-
-          <button className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:bg-white">
-            <CalendarDays size={16} />
-            Last 30 days
-          </button>
+    <div className="p-8 space-y-8 overflow-y-auto">
+      <div className="flex items-end justify-between">
+        <div>
+          <span className="text-[10px] font-black text-cyan-500 uppercase tracking-[0.3em]">Telemetry Dashboard</span>
+          <h1 className="text-2xl font-bold text-white mt-1">Operational Analytics</h1>
         </div>
-      </section>
+        <button className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-xs font-bold text-slate-400">
+          <Calendar size={14} /> Last 30 Days
+        </button>
+      </div>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {metrics.map((metric) => {
-          const Icon = metric.icon;
-          return (
-            <article
-              key={metric.label}
-              className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="rounded-2xl bg-slate-100 p-3 text-slate-700">
-                  <Icon size={18} />
-                </div>
-                <span
-                  className={`inline-flex items-center gap-1 text-xs font-semibold ${metric.isUp ? 'text-emerald-600' : 'text-rose-600'}`}
-                >
-                  {metric.isUp ? (
-                    <ArrowUpRight size={14} />
-                  ) : (
-                    <ArrowDownRight size={14} />
-                  )}
-                  {metric.delta}
-                </span>
-              </div>
-              <p className="mt-4 text-sm text-slate-500">{metric.label}</p>
-              <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">
-                {metric.value}
-              </p>
-            </article>
-          );
-        })}
-      </section>
-
-      <section className="grid gap-4 xl:grid-cols-[2fr_1fr]">
-        <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h3 className="text-lg font-semibold text-slate-950">
-                Revenue trend
-              </h3>
-              <p className="text-sm text-slate-600">
-                Monthly values from the current project.
-              </p>
+      <section className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {[
+          { label: 'Revenue', val: '$4.2M', delta: '+12%', icon: TrendingUp, color: 'text-emerald-400' },
+          { label: 'Latency', val: '142ms', delta: '-18%', icon: Layers, color: 'text-cyan-400' },
+          { label: 'Queries', val: '18.4k', delta: '+3%', icon: BarChart3, color: 'text-indigo-400' },
+          { label: 'Sources', val: 'Live', delta: '3/3', icon: Database, color: 'text-amber-400' },
+        ].map((m, i) => (
+          <div key={i} className="p-5 bg-[#050912] border border-white/5 rounded-2xl relative overflow-hidden group">
+            <m.icon size={24} className={`absolute -right-2 -bottom-2 opacity-5 ${m.color}`} />
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">{m.label}</p>
+            <div className="flex items-baseline justify-between">
+              <h3 className="text-2xl font-bold text-white">{m.val}</h3>
+              <span className={`text-[10px] font-black ${m.delta.includes('-') ? 'text-rose-400' : 'text-emerald-400'}`}>{m.delta}</span>
             </div>
-            <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
-              +14.2% QoQ
-            </span>
           </div>
+        ))}
+      </section>
 
-          <div className="mt-6 flex h-64 items-end gap-2 rounded-2xl bg-slate-50 p-4">
-            {analyticsBars.map((height, index) => (
-              <div
-                key={index}
-                className="flex-1 rounded-t-2xl bg-gradient-to-t from-indigo-600 to-cyan-400"
-                style={{ height: `${height}%` }}
-              />
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 p-6 bg-[#050912] border border-white/5 rounded-[2rem]">
+          <div className="flex justify-between items-center mb-8">
+            <h3 className="text-sm font-black uppercase tracking-widest text-white">Throughput Trends</h3>
+            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded">+14.2% Growth</span>
+          </div>
+          <div className="flex items-end gap-2 h-48 px-2">
+            {bars.map((h, i) => (
+              <div key={i} className="flex-1 bg-gradient-to-t from-indigo-600/50 to-cyan-400 rounded-t-lg transition-all hover:brightness-125" style={{ height: `${h}%` }} />
             ))}
           </div>
-        </article>
+        </div>
 
-        <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h3 className="text-lg font-semibold text-slate-950">Source mix</h3>
-          <p className="mt-1 text-sm text-slate-600">
-            How the project currently uses each connector.
-          </p>
-
-          <div className="mt-6 space-y-4">
+        <div className="p-6 bg-[#050912] border border-white/5 rounded-[2rem] flex flex-col">
+          <h3 className="text-sm font-black uppercase tracking-widest text-white mb-6">Source Mix</h3>
+          <div className="space-y-6 flex-grow flex flex-col justify-center">
             {[
-              { name: 'SQL', value: '54%', tone: 'bg-indigo-500' },
-              { name: 'MongoDB', value: '28%', tone: 'bg-cyan-500' },
-              { name: 'RAG', value: '18%', tone: 'bg-emerald-500' },
-            ].map((item) => (
-              <div key={item.name}>
-                <div className="mb-2 flex items-center justify-between text-sm">
-                  <span className="font-medium text-slate-700">
-                    {item.name}
-                  </span>
-                  <span className="text-slate-500">{item.value}</span>
+              { name: 'SQL Query', val: '54%', color: 'bg-indigo-500' },
+              { name: 'Vector Search', val: '28%', color: 'bg-cyan-500' },
+              { name: 'Document RAG', val: '18%', color: 'bg-emerald-500' },
+            ].map((s) => (
+              <div key={s.name}>
+                <div className="flex justify-between text-[10px] font-black uppercase text-slate-500 mb-2">
+                  <span>{s.name}</span>
+                  <span>{s.val}</span>
                 </div>
-                <div className="h-2 rounded-full bg-slate-100">
-                  <div
-                    className={`h-2 rounded-full ${item.tone}`}
-                    style={{ width: item.value }}
-                  />
+                <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                  <div className={`h-full ${s.color} rounded-full`} style={{ width: s.val }} />
                 </div>
               </div>
             ))}
           </div>
-        </article>
+        </div>
       </section>
     </div>
   );
