@@ -1,112 +1,190 @@
 import React, { useState } from 'react';
-import { 
-  Bell, 
-  Mail, 
-  MessageSquare, 
-  Zap, 
-  Clock, 
-  Settings2, 
-  ChevronLeft, 
-  ChevronRight, 
+import {
+  Bell,
+  Mail,
+  MessageSquare,
+  Zap,
+  Clock,
+  Settings2,
+  ChevronLeft,
+  ChevronRight,
   AlertCircle,
-  ShieldCheck
+  ShieldCheck,
 } from 'lucide-react';
 
 const NotificationsPage = () => {
   const [page, setPage] = useState(1);
 
   const logs = [
-    { id: 'LOG-902', event: 'Revenue Threshold Met', target: 'Email', time: '2 mins ago', status: 'Delivered' },
-    { id: 'LOG-901', event: 'New SQL Source Sync', target: 'System', time: '1 hour ago', status: 'Seen' },
-    { id: 'LOG-899', event: 'Anomaly Detected: Q4 Data', target: 'Slack', time: '3 hours ago', status: 'Failed' },
-    { id: 'LOG-898', event: 'Weekly Summary Ready', target: 'Email', time: 'Yesterday', status: 'Delivered' },
-    { id: 'LOG-897', event: 'Security Login: Alex R.', target: 'System', time: 'Oct 24', status: 'Delivered' },
+    {
+      id: 'LOG-902',
+      event: 'REVENUE THRESHOLD MET',
+      target: 'EMAIL',
+      time: '14:32:00',
+      status: 'DELIVERED',
+    },
+    {
+      id: 'LOG-901',
+      event: 'NEW SQL SOURCE SYNC',
+      target: 'SYSTEM',
+      time: '13:00:15',
+      status: 'SEEN',
+    },
+    {
+      id: 'LOG-899',
+      event: 'ANOMALY DETECTED: Q4 DATA',
+      target: 'SLACK',
+      time: '10:45:00',
+      status: 'FAILED',
+    },
+    {
+      id: 'LOG-898',
+      event: 'WEEKLY SUMMARY READY',
+      target: 'EMAIL',
+      time: 'YESTERDAY',
+      status: 'DELIVERED',
+    },
+    {
+      id: 'LOG-897',
+      event: 'SECURITY LOGIN: ALEX R.',
+      target: 'SYSTEM',
+      time: '2024-10-24',
+      status: 'DELIVERED',
+    },
   ];
 
   return (
-    <div className="max-w-6xl mx-auto px-8 py-10 space-y-8">
+    <div className="max-w-7xl mx-auto px-8 py-10 space-y-8">
       {/* --- HEADER --- */}
-      <header className="flex justify-between items-end">
+      <header className="flex justify-between items-end border-b border-white/5 pb-6">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <div className="h-1.5 w-1.5 rounded-full bg-cyan-500 animate-pulse" />
-            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Alert Configuration</span>
+          <div className="flex items-center gap-2 mb-2">
+            <div className="h-1.5 w-1.5 bg-[#98465f] rounded-none animate-pulse" />
+            <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#98465f]">
+              Alert Configuration
+            </span>
           </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Notification Center</h1>
+          <h1 className="text-2xl font-light text-white tracking-widest uppercase">
+            Notification Center
+          </h1>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition-all">
-          <Settings2 size={14} />
-          GLOBAL SETTINGS
+        <button className="flex items-center gap-2 px-4 py-2 bg-[#0a0a0c] border border-white/10 rounded-none text-[10px] font-bold tracking-[0.2em] text-slate-400 hover:text-white transition-colors uppercase">
+          <Settings2 size={12} strokeWidth={1.5} />
+          Global Settings
         </button>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* --- LEFT: TRIGGER SETUP --- */}
         <div className="lg:col-span-2 space-y-6">
-          <section className="bg-[#050912] border border-white/5 rounded-[2rem] p-6 shadow-2xl">
-            <h3 className="text-sm font-black uppercase tracking-widest text-white mb-6 flex items-center gap-2">
-              <Zap size={16} className="text-amber-400" />
+          <section className="bg-app-strong border border-white/10 rounded-none p-6">
+            <h3 className="text-[10px] font-bold uppercase tracking-[0.3em] text-white mb-6 pb-4 border-b border-white/5 flex items-center gap-2">
+              <Zap size={12} strokeWidth={1.5} className="text-amber-500" />
               Active Automations
             </h3>
-            
-            <div className="space-y-4">
+
+            <div className="space-y-3">
               {[
-                { title: 'Revenue Anomaly', desc: 'Notify if Q4 projections deviate > 5%', icon: AlertCircle, color: 'text-rose-400' },
-                { title: 'Source Synchronization', desc: 'Alert when SQL/MongoDB sync completes', icon: ShieldCheck, color: 'text-emerald-400' },
+                {
+                  title: 'Revenue Anomaly',
+                  desc: 'Notify if Q4 projections deviate > 5%',
+                  icon: AlertCircle,
+                  color: 'text-rose-500',
+                },
+                {
+                  title: 'Source Synchronization',
+                  desc: 'Alert when SQL/MongoDB sync completes',
+                  icon: ShieldCheck,
+                  color: 'text-emerald-500',
+                },
               ].map((trigger, i) => (
-                <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-white/10 transition-all">
+                <div
+                  key={i}
+                  className="flex items-center justify-between p-4 bg-app border border-white/5 hover:border-white/20 transition-colors group"
+                >
                   <div className="flex items-center gap-4">
-                    <div className={`p-3 rounded-xl bg-white/5 ${trigger.color}`}>
-                      <trigger.icon size={18} />
+                    <div
+                      className={`p-2 border border-white/5 bg-black/50 ${trigger.color}`}
+                    >
+                      <trigger.icon size={16} strokeWidth={1.5} />
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-slate-200">{trigger.title}</p>
-                      <p className="text-xs text-slate-500">{trigger.desc}</p>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-ui mb-1 group-hover:text-white transition-colors">
+                        {trigger.title}
+                      </p>
+                      <p className="text-[10px] tracking-wide text-muted">
+                        {trigger.desc}
+                      </p>
                     </div>
                   </div>
+                  {/* Strict CAD Toggle */}
                   <div className="flex items-center gap-3">
-                    <div className="h-5 w-10 bg-cyan-500/20 rounded-full relative border border-cyan-500/30 cursor-pointer">
-                      <div className="absolute right-1 top-1 h-3 w-3 bg-cyan-400 rounded-full shadow-[0_0_8px_rgba(34,211,238,0.5)]" />
+                    <div className="w-8 h-3 bg-[#98465f]/20 border border-[#98465f] relative cursor-pointer">
+                      <div className="absolute right-0 top-0 bottom-0 w-3 bg-[#98465f]" />
                     </div>
                   </div>
                 </div>
               ))}
             </div>
-            
-            <button className="w-full mt-6 py-3 rounded-2xl border border-dashed border-white/10 text-xs font-black text-slate-500 hover:text-cyan-400 hover:border-cyan-400/50 transition-all uppercase tracking-widest">
-              + Add New Threshold Alert
+
+            <button className="w-full mt-4 py-3 border border-dashed border-white/10 text-[9px] font-bold text-muted hover:text-white hover:border-white/30 transition-colors uppercase tracking-[0.2em] bg-transparent">
+              + Add Threshold Alert
             </button>
           </section>
 
           {/* --- AUDIT LOG WITH PAGING --- */}
-          <section className="bg-[#050912] border border-white/5 rounded-[2rem] overflow-hidden">
-            <div className="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-white/[0.01]">
-              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Dispatch Logs</h3>
-              <div className="flex items-center gap-1">
-                <span className="text-[10px] font-mono text-slate-600 mr-2">PAGE {page} OF 12</span>
-                <button onClick={() => setPage(p => Math.max(1, p-1))} className="p-1.5 hover:bg-white/5 rounded-lg text-slate-400 transition-colors">
-                  <ChevronLeft size={14} />
-                </button>
-                <button onClick={() => setPage(p => p+1)} className="p-1.5 hover:bg-white/5 rounded-lg text-slate-400 transition-colors">
-                  <ChevronRight size={14} />
-                </button>
+          <section className="bg-app-strong border border-white/10 rounded-none overflow-hidden">
+            <div className="px-6 py-4 border-b border-white/10 flex justify-between items-center bg-black/50">
+              <h3 className="text-[9px] font-bold uppercase tracking-[0.3em] text-slate-500">
+                Dispatch Logs
+              </h3>
+              <div className="flex items-center gap-3">
+                <span className="text-[9px] font-mono text-muted">
+                  PAGE {page} OF 12
+                </span>
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    className="p-1 hover:bg-white/10 text-slate-500 transition-colors border border-transparent hover:border-white/10"
+                  >
+                    <ChevronLeft size={12} strokeWidth={2} />
+                  </button>
+                  <button
+                    onClick={() => setPage((p) => p + 1)}
+                    className="p-1 hover:bg-white/10 text-slate-500 transition-colors border border-transparent hover:border-white/10"
+                  >
+                    <ChevronRight size={12} strokeWidth={2} />
+                  </button>
+                </div>
               </div>
             </div>
             <table className="w-full text-left">
               <tbody className="divide-y divide-white/5">
                 {logs.map((log) => (
-                  <tr key={log.id} className="hover:bg-white/[0.01] transition-all group">
+                  <tr
+                    key={log.id}
+                    className="hover-bg-app transition-colors group"
+                  >
                     <td className="px-6 py-4">
-                      <p className="text-xs font-bold text-slate-300">{log.event}</p>
-                      <p className="text-[10px] font-mono text-slate-600">{log.id}</p>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-ui group-hover:text-white transition-colors">
+                        {log.event}
+                      </p>
+                      <p className="text-[9px] font-mono text-muted mt-1">
+                        {log.id}
+                      </p>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-[10px] font-black bg-white/5 px-2 py-1 rounded text-slate-500 uppercase tracking-tighter">{log.target}</span>
+                      <span className="text-[9px] font-bold border border-white/5 bg-black px-2 py-1 text-slate-500 uppercase tracking-widest">
+                        {log.target}
+                      </span>
                     </td>
-                    <td className="px-6 py-4 text-[10px] text-slate-500 font-bold uppercase">{log.time}</td>
+                    <td className="px-6 py-4 text-[9px] font-mono text-muted uppercase">
+                      {log.time}
+                    </td>
                     <td className="px-6 py-4 text-right">
-                      <span className={`text-[10px] font-black uppercase ${log.status === 'Failed' ? 'text-rose-500' : 'text-emerald-500'}`}>
+                      <span
+                        className={`text-[9px] font-bold uppercase tracking-widest ${log.status === 'FAILED' ? 'text-rose-500' : 'text-emerald-500'}`}
+                      >
                         {log.status}
                       </span>
                     </td>
@@ -119,41 +197,82 @@ const NotificationsPage = () => {
 
         {/* --- RIGHT: CHANNELS & SCHEDULE --- */}
         <div className="space-y-6">
-          <section className="bg-[#050912] border border-white/5 rounded-[2rem] p-6">
-            <h3 className="text-xs font-black uppercase tracking-widest text-white mb-6">Delivery Channels</h3>
-            <div className="space-y-4">
+          <section className="bg-app-strong border border-white/10 rounded-none p-6">
+            <h3 className="text-[10px] font-bold uppercase tracking-[0.3em] text-white mb-6 pb-4 border-b border-white/5">
+              Channels
+            </h3>
+            <div className="space-y-3">
               {[
-                { name: 'Email Dispatch', icon: Mail, status: 'Connected', sub: 'alex@adia.ai' },
-                { name: 'Slack Integration', icon: MessageSquare, status: 'Active', sub: '#data-alerts' },
-                { name: 'Push (Mobile)', icon: Bell, status: 'Disabled', sub: 'No devices linked' },
+                {
+                  name: 'Email Dispatch',
+                  icon: Mail,
+                  status: 'CONNECTED',
+                  sub: 'alex@adia.ai',
+                },
+                {
+                  name: 'Slack Hook',
+                  icon: MessageSquare,
+                  status: 'ACTIVE',
+                  sub: '#data-alerts',
+                },
+                {
+                  name: 'Mobile Push',
+                  icon: Bell,
+                  status: 'DISABLED',
+                  sub: 'No devices linked',
+                },
               ].map((channel, i) => (
-                <div key={i} className="flex items-center gap-4 group cursor-pointer">
-                  <div className="h-10 w-10 shrink-0 rounded-xl bg-slate-900 border border-white/5 flex items-center justify-center text-slate-400 group-hover:text-cyan-400 transition-colors">
-                    <channel.icon size={18} />
+                <div
+                  key={i}
+                  className="flex items-center gap-4 group cursor-pointer p-3 border border-transparent hover:border-white/5 hover-bg-app transition-colors"
+                >
+                  <div className="h-8 w-8 shrink-0 bg-black border border-white/10 flex items-center justify-center text-muted group-hover:text-white transition-colors">
+                    <channel.icon size={12} strokeWidth={1.5} />
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-slate-200">{channel.name}</p>
-                    <p className="text-[9px] font-black uppercase text-slate-600 tracking-tighter">{channel.sub}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-ui group-hover:text-white transition-colors">
+                      {channel.name}
+                    </p>
+                    <p className="text-[9px] font-mono text-muted uppercase mt-0.5">
+                      {channel.sub}
+                    </p>
                   </div>
                   <div className="ml-auto">
-                    <div className={`h-1.5 w-1.5 rounded-full ${channel.status === 'Disabled' ? 'bg-slate-700' : 'bg-emerald-500 shadow-[0_0_8px_#10b981]'}`} />
+                    <div
+                      className={`h-1.5 w-1.5 rounded-none ${channel.status === 'DISABLED' ? 'bg-slate-700' : 'bg-emerald-500 shadow-[0_0_8px_#10b981]'}`}
+                    />
                   </div>
                 </div>
               ))}
             </div>
           </section>
 
-          <section className="bg-gradient-to-br from-cyan-500/10 to-indigo-500/10 border border-cyan-500/20 rounded-[2rem] p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Clock size={16} className="text-cyan-400" />
-              <h3 className="text-xs font-black uppercase tracking-widest text-white">Quiet Hours</h3>
+          <section className="bg-app border border-[#98465f]/30 rounded-none p-6 relative overflow-hidden">
+            {/* Warning hatch pattern */}
+            <div
+              className="absolute inset-0 pointer-events-none opacity-10"
+              style={{
+                backgroundImage:
+                  'repeating-linear-gradient(45deg, transparent, transparent 10px, #98465f 10px, #98465f 20px)',
+              }}
+            />
+
+            <div className="relative z-10">
+              <div className="flex items-center gap-2 mb-4">
+                <Clock size={12} strokeWidth={2} className="text-[#98465f]" />
+                <h3 className="text-[10px] font-bold uppercase tracking-[0.3em] text-white">
+                  Quiet Hours
+                </h3>
+              </div>
+              <p className="text-[10px] tracking-wide text-muted leading-relaxed mb-5">
+                Suppress non-critical alerts between{' '}
+                <span className="text-white font-mono">22:00 — 06:00</span> to
+                maintain operational focus.
+              </p>
+              <button className="text-[9px] font-bold text-[#98465f] hover:text-white border border-[#98465f]/30 hover:border-white/30 bg-black/50 px-3 py-1.5 uppercase tracking-[0.2em] transition-colors">
+                Configure
+              </button>
             </div>
-            <p className="text-xs text-slate-400 leading-relaxed mb-4">
-              Suppress non-critical alerts between <span className="text-white font-bold">22:00 — 06:00</span> to maintain operational focus.
-            </p>
-            <button className="text-[10px] font-black text-cyan-500 hover:text-cyan-300 uppercase tracking-[0.2em] transition-all">
-              Edit Schedule →
-            </button>
           </section>
         </div>
       </div>
