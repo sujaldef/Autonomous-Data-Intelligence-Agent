@@ -96,9 +96,10 @@ const ProjectLayout = () => {
         <nav className="flex-1 px-4 space-y-2">
           <div className="hidden lg:block px-3 mb-4">
             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-600">
-              Operations
+              Operations are here [later we can remove it ]
             </span>
           </div>
+
 
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -134,6 +135,7 @@ const ProjectLayout = () => {
             );
           })}
         </nav>
+
 
         {/* System Health (Footer of Sidebar) */}
         <div className="p-6 mt-auto border-t border-white/5 bg-slate-950/30">
