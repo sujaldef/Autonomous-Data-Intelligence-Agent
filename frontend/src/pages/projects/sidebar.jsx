@@ -85,30 +85,36 @@ const ProjectLayout = () => {
             </Link>
           </div>
 
-          {/* Project Branding */}
-          <div className="p-6 border-b border-white/5 relative z-10 bg-app-strong">
-            <div className="flex items-center gap-4">
-              <div
-                className={`h-2 w-2 ${project.color} shadow-[0_0_8px_currentColor] opacity-80`}
-              />
-              <div className="hidden lg:block">
-                <p className="text-[9px] font-mono text-muted uppercase tracking-widest mb-1">
-                  ID: {project.id}
-                </p>
-                <h2 className="text-xs font-bold text-strong uppercase tracking-widest leading-tight">
-                  {project.name}
-                </h2>
-              </div>
-            </div>
+        {/* Navigation Rail */}
+        <nav className="flex-1 px-4 space-y-2">
+          <div className="hidden lg:block px-3 mb-4">
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-600">
+              Operations are here [later we can remove it ]
+            </span>
           </div>
 
-          {/* Navigation Rail */}
-          <nav className="flex-1 px-4 py-6 space-y-1 relative z-10">
-            <div className="hidden lg:block px-3 mb-6">
-              <span className="text-[9px] font-bold uppercase tracking-[0.3em] text-muted">
-                Operations
-              </span>
-            </div>
+
+          {navItems.map((item) => {
+            const Icon = item.icon;
+
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) =>
+                  [
+                    'flex items-center gap-4 px-3 py-3 rounded-xl text-sm font-bold transition-all group',
+                    isActive
+                      ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-[0_0_20px_rgba(6,182,212,0.1)]'
+                      : 'text-slate-500 hover:text-slate-200 hover:bg-white/5 border border-transparent',
+                  ].join(' ')
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+
+                    <span className="hidden lg:block">{item.label}</span>
 
             {navItems.map((item) => {
               const Icon = item.icon;
@@ -132,28 +138,28 @@ const ProjectLayout = () => {
                         strokeWidth={isActive ? 2 : 1.5}
                         className={isActive ? 'text-[#98465f]' : 'text-muted'}
                       />
-                      <span className="hidden lg:block">{item.label}</span>
-                    </>
-                  )}
-                </NavLink>
-              );
-            })}
-          </nav>
+                    )}
+                  </>
+                )}
+              </NavLink>
+            );
+          })}
+        </nav>
 
-          {/* System Health Footer */}
-          <div className="p-6 mt-auto border-t border-white/5 bg-app-strong relative z-10">
-            <div className="flex items-center gap-4">
-              <div className="h-8 w-8 shrink-0 pill-bg border border-white/5 flex items-center justify-center text-emerald-500">
-                <Activity size={14} strokeWidth={1.5} />
-              </div>
-              <div className="hidden lg:block">
-                <p className="text-[9px] font-bold text-slate-600 uppercase tracking-widest mb-0.5">
-                  SYS_STATUS
-                </p>
-                <p className="text-[10px] font-mono text-emerald-500 tracking-wider">
-                  SYNCED
-                </p>
-              </div>
+
+        {/* System Health (Footer of Sidebar) */}
+        <div className="p-6 mt-auto border-t border-white/5 bg-slate-950/30">
+          <div className="flex items-center gap-4">
+            <div className="h-10 w-10 shrink-0 rounded-xl bg-slate-900 border border-white/10 flex items-center justify-center text-emerald-500">
+              <Activity size={18} />
+            </div>
+            <div className="hidden lg:block">
+              <p className="text-[10px] font-black text-slate-500 uppercase">
+                Agent Status
+              </p>
+              <p className="text-xs font-bold text-white">
+                Live & Synchronized
+              </p>
             </div>
           </div>
         </aside>
