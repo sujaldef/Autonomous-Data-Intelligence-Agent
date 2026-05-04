@@ -79,33 +79,129 @@ const Docs = () => {
       </div>
 
       {/* --- FULL SCREEN HERO --- */}
-      <header className="relative z-10 min-h-screen flex flex-col justify-center px-6 md:px-20 max-w-7xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="max-w-2xl"
-        >
-          <div className="flex items-center gap-3 mb-6">
-            <Code2 className="text-[#98465f]" size={14} />
-            <span className="text-[9px] tracking-[0.4em] uppercase text-muted font-bold">
-              Developer Docs
-            </span>
-          </div>
-          <h1 className="text-5xl md:text-6xl font-light tracking-tight mb-6 text-strong">
-            System{' '}
-            <span className="font-serif italic text-muted">Reference</span>
-          </h1>
-          <p className="text-sm text-muted font-light leading-relaxed max-w-lg">
-            Complete technical specification of the ADIA API boundaries, data
-            pipelines, and underlying technology stack.
-            <br />
-            <br />
-            <span className="text-[10px] uppercase tracking-widest text-[#98465f] font-bold">
-              Scroll for documentation &darr;
-            </span>
-          </p>
-        </motion.div>
-      </header>
+      {/* --- UPDATED BACKGROUND & HERO --- */}
+<div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+  {/* The Galaxy Drift (Slow & subtle) */}
+  <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,_#0a0a12_0%,_#000000_100%)]" />
+  
+  {/* Star particles overlay (Subtle CSS stars) */}
+  <div className="absolute inset-0 opacity-20" 
+       style={{ backgroundImage: `radial-gradient(white 1px, transparent 0)`, backgroundSize: '100px 100px' }} />
+  
+  {/* The "Neural" Glow behind text */}
+  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[500px] bg-[#98465f]/5 blur-[120px] rounded-full" />
+</div>
+
+<header className="relative z-10 min-h-screen flex flex-col justify-center px-6 md:px-20 max-w-7xl mx-auto overflow-hidden">
+  <div className="grid lg:grid-cols-2 gap-12 items-center">
+    
+    {/* TEXT CONTENT */}
+    <motion.div
+      initial={{ opacity: 0, x: -30 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.8, ease: "easeOut" }}
+    >
+      <div className="flex items-center gap-3 mb-8">
+        <div className="h-px w-8 bg-[#98465f]/50" />
+        <span className="text-[10px] tracking-[0.5em] uppercase text-[#98465f] font-bold">
+          Technical Specification
+        </span>
+      </div>
+      
+      <h1 className="text-6xl md:text-8xl font-light tracking-tighter mb-8 text-white leading-[0.9]">
+        System <br />
+        <span className="font-serif italic text-white/40" style={{ fontFamily: "'Playfair Display', serif" }}>
+          Reference
+        </span>
+      </h1>
+      
+      <p className="text-sm md:text-base text-white/40 font-light leading-relaxed max-w-md mb-10 tracking-wide">
+        Complete technical specification of the ADIA API boundaries, data
+        pipelines, and underlying technology stack. Designed for deterministic 
+        execution.
+      </p>
+
+      <div className="flex gap-8 items-center">
+        <div className="flex flex-col">
+          <span className="text-[10px] uppercase text-white/20 tracking-widest font-bold mb-1">Status</span>
+          <span className="text-xs text-emerald-500/80 font-mono flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            Live Production
+          </span>
+        </div>
+        <div className="h-8 w-px bg-white/10" />
+        <div className="flex flex-col">
+          <span className="text-[10px] uppercase text-white/20 tracking-widest font-bold mb-1">Version</span>
+          <span className="text-xs text-white/60 font-mono">v4.1.0-stable</span>
+        </div>
+      </div>
+    </motion.div>
+
+    {/* VISUAL ELEMENT (The "Flow" Visualization) */}
+    <motion.div 
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 1.2, delay: 0.2 }}
+      className="hidden lg:flex justify-center relative"
+    >
+      {/* Abstract API Node visualization */}
+      <div className="relative w-80 h-80 flex items-center justify-center">
+        <motion.div 
+          animate={{ rotate: 360 }}
+          transition={{ duration: 50, repeat: Infinity, ease: "linear" }}
+          className="absolute inset-0 border border-white/5 rounded-full" 
+        />
+        <motion.div 
+          animate={{ rotate: -360 }}
+          transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
+          className="absolute inset-8 border border-[#98465f]/10 rounded-full border-dashed" 
+        />
+        
+        <div className="z-10 p-8 bg-black border border-white/10 backdrop-blur-xl rounded-2xl shadow-2xl shadow-[#98465f]/5">
+           <Code2 className="text-[#98465f] mb-4" size={32} />
+           <div className="space-y-2">
+              <div className="h-1.5 w-24 bg-white/10 rounded-full overflow-hidden">
+                <motion.div 
+                  initial={{ x: "-100%" }}
+                  animate={{ x: "100%" }}
+                  transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+                  className="h-full w-full bg-gradient-to-r from-transparent via-[#98465f] to-transparent" 
+                />
+              </div>
+              <div className="h-1 w-16 bg-white/5 rounded-full" />
+           </div>
+        </div>
+
+        {/* Floating Data Tags */}
+        {[ 
+          { label: 'POST', top: '10%', right: '0%' },
+          { label: 'GET', bottom: '15%', left: '-5%' },
+          { label: 'JSON', top: '40%', left: '-15%' }
+        ].map((tag, i) => (
+          <motion.span 
+            key={i}
+            animate={{ y: [0, -10, 0] }}
+            transition={{ duration: 3, delay: i * 0.5, repeat: Infinity }}
+            className="absolute p-2 bg-white/[0.03] border border-white/10 text-[8px] font-mono tracking-widest text-white/40 rounded"
+            style={{ top: tag.top, right: tag.right, left: tag.left }}
+          >
+            {tag.label}
+          </motion.span>
+        ))}
+      </div>
+    </motion.div>
+  </div>
+
+  {/* SCROLL INDICATOR */}
+  <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3">
+    <span className="text-[8px] uppercase tracking-[0.5em] text-white/20 font-bold">Documentation API</span>
+    <motion.div 
+      animate={{ y: [0, 8, 0], opacity: [0.2, 0.5, 0.2] }}
+      transition={{ repeat: Infinity, duration: 2 }}
+      className="w-px h-12 bg-gradient-to-b from-[#98465f] to-transparent" 
+    />
+  </div>
+</header>
 
       <div className="relative z-10 max-w-6xl mx-auto px-6 md:px-20 grid grid-cols-1 lg:grid-cols-12 gap-12">
         {/* --- LEFT COLUMN: API Endpoints --- */}
