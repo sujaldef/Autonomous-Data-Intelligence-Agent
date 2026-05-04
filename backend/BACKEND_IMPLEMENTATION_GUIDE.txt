@@ -1,0 +1,2275 @@
+ADIA Backend Implementation Guide and Frontend Integration Audit
+
+Status of the current repository:
+- The frontend is present and renders multiple project views, but it is currently UI-only.
+- The backend directory contains only an empty server.py and an empty utils/db.py, plus empty controller, model, and routes folders.
+- The backend therefore needs a complete implementation plan, not just an explanation of existing code.
+- This document describes the backend that must be built so that every visible frontend feature has a concrete API and data source.
+- It also identifies the missing endpoints, support services, data models, and security primitives required for production use.
+
+Primary backend design goals:
+- Provide deterministic, auditable responses to user queries.
+- Keep the LLM as a planner, not as an executor of direct side effects.
+- Support authentication, project dashboards, query execution, history, analytics, and notification management.
+- Preserve a strict boundary between read operations, analysis operations, and mutation operations.
+- Make the backend implementation-ready so each file has explicit responsibilities, data flow, and interfaces.
+
+Global backend assumptions:
+- FastAPI is the web framework.
+- Pydantic models are used for validation and serialization.
+- SQLAlchemy is used for database access.
+- SQLite can be the first storage engine, but the file structure must allow an easy migration to PostgreSQL.
+- LangChain or an equivalent orchestration layer handles the reasoning loop.
+- The agent is tool-driven and must not fabricate numbers.
+- The frontend currently contains static UI states, so the backend must supply data that can replace the hardcoded examples.
+
+Backend files covered in this document:
+- server.py
+- utils/db.py
+- config.py
+- utils/auth.py
+- utils/logger.py
+- model/schemas.py
+- model/db_models.py
+- controller/auth_router.py
+- controller/project_router.py
+- controller/query_router.py
+- controller/history_router.py
+- controller/analytics_router.py
+- controller/notification_router.py
+- agent/orchestrator.py
+- agent/prompts.py
+- agent/memory.py
+- tools/sql_engine.py
+- tools/insight_engine.py
+- tools/action_engine.py
+- tools/viz_engine.py
+- tools/rag_engine.py
+- routes/__init__.py or an equivalent API router registry layer if retained
+
+Required feature coverage from the frontend:
+- Landing page support for system status, authentication entry points, and safe navigation.
+- Login/signup support for user creation and token issuance.
+- Dashboard support for project cards, global metrics, search, and system health.
+- Project workspace support for query execution, history, analytics, and notifications.
+- Sidebar support for project metadata, agent health, and workspace navigation.
+- Query page support for natural-language requests with optional source filters.
+- History page support for audit trail retrieval.
+- Analytics page support for telemetry and operational metrics.
+- Notifications page support for automation rules, dispatch logs, and alert state.
+
+The rest of this file is structured file-by-file.
+
+
+## File: server.py
+
+### 1. Purpose
+server.py is the runtime entry point when the backend is launched from the command line.
+Its job is to create the FastAPI application object, load configuration, register middleware, mount routers, and expose the application instance that Uvicorn imports.
+This file is not where business logic belongs.
+It is the composition root that wires the backend together.
+It should be small, explicit, and deterministic.
+It should not perform data analysis, SQL execution, or agent reasoning.
+It should only initialize the service graph.
+In the current repository, server.py is empty, which means the application cannot boot.
+The file therefore needs to become the central startup module.
+The app object it exports becomes the top-level integration point for the frontend.
+Every API call from React will pass through this file first.
+Because of that, this file controls CORS, routers, lifespan hooks, startup checks, and shutdown cleanup.
+The file also defines whether the backend is ready, healthy, and reachable by the browser.
+If the app is not configured correctly here, none of the other files matter.
+The implementation must guarantee that routes are mounted under stable prefixes.
+The implementation must also guarantee that error handling is consistent across all endpoints.
+A clean server.py makes local development easy and simplifies deployment.
+The file should remain focused on orchestration only.
+It should not import heavy tool modules until necessary unless startup validation requires it.
+The file should support both reload-based development and production deployment.
+It should also be the natural place to define a health endpoint if one is not separated into its own router.
+The frontend's navbar and sidebar status indicators require this file to expose a live status route.
+The landing page and dashboard can use the same route to confirm the system is alive.
+Because the frontend currently shows static text, the implementation should still anticipate future real-time status polling.
+The file should also ensure the API root can be discovered consistently by the frontend.
+If versioning is used, this file should mount routers under /api/v1 or a similar stable prefix.
+The route prefix must remain consistent across authentication, queries, history, analytics, and notification endpoints.
+This file is also the correct place to attach exception handlers for validation and unexpected runtime errors.
+Those handlers keep the frontend from receiving raw Python traces.
+The startup object should expose metadata such as title, version, and description.
+That metadata helps with OpenAPI docs and internal debugging.
+The server entry point is also where startup resource checks can confirm database connectivity and vector store availability.
+That allows the system to fail fast rather than hang later during the first user query.
+The app should be built to support deterministic startup and graceful shutdown.
+That means closing DB sessions, flushing logs, and releasing background task handles.
+Because the frontend is browser-based, the app must include CORS configuration that allows the frontend origin during development.
+For deployment, the allowed origins should be configurable through environment variables.
+The main principle is that server.py orchestrates the backend, but never contains the agent brain itself.
+
+### 2. Responsibilities
+- Create the FastAPI application instance.
+- Load configuration from config.py.
+- Register CORS middleware.
+- Register global exception handlers.
+- Mount all controllers and route groups.
+- Provide health and readiness endpoints.
+- Trigger startup checks for database and model dependencies.
+- Trigger graceful shutdown cleanup.
+- Expose the ASGI app object for Uvicorn.
+- Define route prefixes and API versioning policy.
+- Preserve a clean separation between wiring and business logic.
+- Ensure the frontend can always reach the backend through a predictable base URL.
+- Support OpenAPI generation for internal testing and debugging.
+- Initialize shared dependencies such as logger configuration.
+- Optionally initialize background workers or scheduled jobs.
+- Avoid hardcoding secrets, paths, or deployment-specific values.
+
+### 3. Internal Components
+- FastAPI app instance with title, description, version, docs URL, and openapi URL.
+- CORS middleware that reads allowed origins from config.
+- Router inclusion statements for all controller modules.
+- Lifespan context manager or startup/shutdown event handlers.
+- Exception handlers for HTTPException, validation errors, and unhandled exceptions.
+- Health and readiness response models if the route is declared here.
+- Optional root redirect or API info endpoint.
+- Optional static file mounting for generated charts.
+- Optional background task registration hooks.
+- Logging bootstrap logic that ensures request logs are structured and correlated.
+- Database warmup logic that checks connectivity without mutating data.
+- Model or embedding warmup logic if a local model is used.
+
+### 4. Data Flow
+- The process starts when Uvicorn imports app from server.py.
+- server.py loads settings and initializes logging.
+- It creates the FastAPI app with metadata.
+- It attaches CORS middleware so browser requests are allowed.
+- It mounts routers from controller modules.
+- On startup, it optionally verifies that the database and vector index are reachable.
+- A browser request from the frontend hits the app through one of the registered routes.
+- The request then flows into the appropriate controller and deeper backend layers.
+- On shutdown, the app closes open database engines, flushes logs, and releases any held resources.
+- If a health endpoint is queried, server.py returns readiness metadata and dependency status.
+
+### 5. Function-Level Breakdown
+- create_app(): constructs and returns the FastAPI application instance.
+- register_middleware(app): attaches CORS and any request tracing middleware.
+- register_routers(app): imports and includes controller routers.
+- register_exception_handlers(app): centralizes error formatting.
+- startup_event(): performs dependency checks and warmups.
+- shutdown_event(): closes engines and flushes output buffers.
+- health_route(): returns service health information.
+- readiness_route(): returns whether the backend can serve requests.
+- mount_static_assets(app): exposes generated charts or documents if needed.
+- init_logging(): prepares the global logger before request handling begins.
+- validate_environment(): confirms required environment variables are present.
+
+### 6. Integration with Other Files
+- Uses config.py for environment and deployment settings.
+- Uses utils/logger.py for request and system logging.
+- Uses utils/db.py for database engine and session initialization.
+- Includes controller/auth_router.py for login and signup routes.
+- Includes controller/project_router.py for project listing and workspace metadata.
+- Includes controller/query_router.py for the natural-language query endpoint.
+- Includes controller/history_router.py for audit trail retrieval.
+- Includes controller/analytics_router.py for telemetry and charts.
+- Includes controller/notification_router.py for alerts and dispatch logs.
+- May include routes/__init__.py if routers are aggregated in a registry pattern.
+- Depends on model/schemas.py so responses are serialized consistently.
+- Depends on model/db_models.py if startup needs to create tables.
+- May depend on agent/orchestrator.py for startup validation of tool availability.
+
+### 7. Example Request/Response
+- Example startup metadata response:
+  {
+    "name": "ADIA Backend",
+    "version": "1.0.0",
+    "status": "ready"
+  }
+- Example health response:
+  {
+    "status": "healthy",
+    "database": "connected",
+    "vector_store": "available",
+    "agent": "ready"
+  }
+- Example browser preflight behavior:
+  The frontend sends an OPTIONS request, CORS middleware returns the allowed origin headers, and the actual API request proceeds.
+
+### 8. Edge Cases & Failure Handling
+- Missing environment variables should fail fast at startup.
+- Database unavailable at startup should return readiness=false and log an actionable error.
+- A bad router import should stop app boot rather than produce partially mounted routes.
+- Validation errors should return a stable JSON shape the frontend can read.
+- Unexpected exceptions should be converted into sanitized 500 responses.
+- Duplicate route prefixes should be detected during integration testing.
+- Static asset directory missing should not crash the app if static files are optional.
+- CORS misconfiguration should be visible in startup logs.
+- If a dependency warmup times out, the app should still start in degraded mode only if explicitly allowed.
+- Unhandled startup failures should be evident in Uvicorn output and structured logs.
+
+### 9. Security Considerations
+- Never embed secrets directly in the source file.
+- Restrict CORS origins to trusted frontend hosts.
+- Avoid exposing internal stack traces to the browser.
+- Keep route registration explicit to prevent accidental exposure of debug endpoints.
+- Ensure health endpoints do not leak sensitive configuration values.
+- Sanitize startup error messages before returning them to clients.
+- If static files are mounted, ensure only safe directories are exposed.
+- Do not use server.py to store tokens, passwords, or database credentials.
+- Protect admin-only diagnostics behind authentication if they are ever added.
+- Make logs useful but not credential-bearing.
+
+### 10. Scalability Notes
+- Keeping server.py thin makes scaling easier because workers can be added without code duplication.
+- Route mounting should remain modular so new APIs can be added without touching the composition root heavily.
+- Lifespan warmups should be lightweight to avoid slow container startup.
+- Health checks should be cheap enough for load balancers and uptime probes.
+- CORS and middleware layers should remain minimal to reduce per-request overhead.
+- Static file serving should be disabled or offloaded when using a CDN or object storage.
+- The application factory pattern makes testing and multi-environment deployment easier.
+- If the backend later becomes multi-process, startup code must remain idempotent.
+- Shared state should not be stored in module globals unless read-only.
+
+
+## File: utils/db.py
+
+### 1. Purpose
+utils/db.py owns database connectivity, session creation, and transaction lifecycle management.
+It is the low-level bridge between application code and persistent storage.
+All database-backed routers and services should go through this module rather than creating ad hoc connections.
+The file is currently empty, which means no database access is available yet.
+This file must become the single source of truth for engine creation, session factories, and dependency injection.
+It should support local SQLite for development and a more scalable database for production.
+It should hide connection details from controllers and services.
+It should also define the dependency function FastAPI uses to inject DB sessions into routes.
+Because the frontend relies on history, analytics, notifications, users, and project metadata, this module is foundational.
+It also supports logging query execution and storing alert rules.
+If the database layer is wrong, the entire agent history and audit trail become unreliable.
+The module must therefore be robust, explicit, and easy to test.
+It should own the engine, sessionmaker, and base metadata utilities.
+It should not contain ORM models themselves.
+It should not mix schema definitions with connection setup.
+The file should expose a create_engine configuration that can be swapped via environment variables.
+It should also make table creation possible for local bootstrapping.
+If using SQLite, it must ensure the required connect arguments are set correctly.
+If using PostgreSQL later, it must support pooling and sane connection settings.
+This module should be the place where migrations are prepared, even if Alembic is added later.
+The get_db dependency should yield a session and guarantee close on completion.
+The module should preserve one session per request semantics.
+The code should be compatible with synchronous SQLAlchemy usage because many endpoints will use synchronous ORM access.
+If async database access is adopted later, the module should isolate the migration path.
+The interface should stay simple enough that routers do not need to know the engine flavor.
+The frontend never directly sees this file, but every persisted feature depends on it.
+That includes auth data, query logs, history rows, alert rules, and aggregated dashboard metrics.
+The module should also support a read-only connection mode for analytical endpoints if needed.
+It should help prevent session leakage under error conditions.
+It should also be the place where database file paths are normalized on Windows and Unix.
+The implementation must explicitly handle SQLite threading behavior.
+The module can also expose helper functions for initializing sample data in development.
+Those helpers should never run in production automatically.
+The goal is to make persistence predictable and safe.
+
+### 2. Responsibilities
+- Create the SQLAlchemy engine.
+- Create the session factory.
+- Provide a get_db dependency for FastAPI.
+- Provide optional initialization helpers for tables and seed data.
+- Normalize database URLs from environment variables.
+- Handle SQLite-specific connection arguments.
+- Close sessions reliably after each request.
+- Support future migration to PostgreSQL.
+- Optionally expose the declarative base class.
+- Optionally expose transaction helpers.
+- Avoid importing routers or agent code.
+- Keep the persistence layer isolated from presentation logic.
+
+### 3. Internal Components
+- engine object created from DATABASE_URL.
+- SessionLocal factory configured with autocommit=False and autoflush=False.
+- Base declarative class.
+- get_db() generator dependency.
+- init_db() helper to create all tables.
+- maybe_drop_and_recreate() helper for test environments only.
+- connection argument normalization for SQLite.
+- optional ping/health helper for startup checks.
+- optional transaction context manager.
+
+### 4. Data Flow
+- The environment variable DATABASE_URL is read from config.py or directly from os.environ.
+- The URL is normalized depending on whether SQLite or another database is used.
+- The engine is instantiated.
+- SessionLocal is created and used by FastAPI dependency injection.
+- A controller requests a session via Depends(get_db).
+- The controller passes the session into service logic or repositories.
+- The service queries or mutates data.
+- The session is committed, rolled back on failure, and closed after the request.
+- Startup can call init_db() to ensure tables exist.
+- Health checks can call a lightweight connection test.
+
+### 5. Function-Level Breakdown
+- create_database_url(): parses and normalizes DB connection strings.
+- create_engine_instance(): builds the SQLAlchemy engine.
+- create_session_factory(): configures SessionLocal.
+- get_db(): yields a request-scoped session.
+- init_db(): creates tables from ORM metadata.
+- ping_database(): checks connectivity cheaply.
+- get_transaction(): optional context manager for grouped operations.
+- seed_development_data(): optional helper for local demos.
+
+### 6. Integration with Other Files
+- Used by controller/auth_router.py to store and read users.
+- Used by controller/query_router.py to store query logs and fetch metadata.
+- Used by controller/history_router.py to read audit history.
+- Used by controller/analytics_router.py to aggregate telemetry.
+- Used by controller/notification_router.py to store alert rules and dispatch logs.
+- Used by model/db_models.py to bind ORM metadata.
+- Used by server.py during startup checks.
+- Potentially used by utils/auth.py when looking up users by email.
+- Potentially used by agent/memory.py if conversation state is persisted.
+
+### 7. Example Request/Response
+- Example database session lifecycle:
+  Controller asks for a DB session, a query executes, commit occurs on success, rollback occurs on error, and the session closes automatically.
+- Example connectivity result:
+  {
+    "database": "connected",
+    "url_type": "sqlite"
+  }
+
+### 8. Edge Cases & Failure Handling
+- Database file missing should trigger creation if SQLite is used and directory permissions allow it.
+- A malformed DATABASE_URL should fail at startup with a clear message.
+- SQLite in-memory URLs require special handling if tests are used.
+- Connection interruptions must cause rollback and session closure.
+- Long-running analytical queries should have timeouts or pagination support in higher layers.
+- Concurrent write collisions in SQLite should be handled by retries or migration to a stronger DB for production.
+- Session objects must never be reused across requests.
+- Table creation should not overwrite existing data unexpectedly.
+
+### 9. Security Considerations
+- Database credentials must come from environment variables.
+- Avoid logging the full connection string if it contains secrets.
+- Use parameterized queries through SQLAlchemy rather than raw string concatenation.
+- Never expose raw database errors directly to frontend users.
+- Keep read-only analytical endpoints separate from mutation endpoints when possible.
+- Ensure session scope does not leak user data across requests.
+- Use least-privilege credentials in production.
+
+### 10. Scalability Notes
+- SQLite is adequate for early development but not for high-concurrency production workloads.
+- The module must be easy to retarget to PostgreSQL.
+- Using a session factory and dependency injection keeps the code horizontally scalable.
+- Connection pooling should be enabled in production databases.
+- Query limits and pagination should be applied in upper layers to avoid large memory use.
+- ORM metadata should be compatible with migration tools like Alembic.
+
+
+## File: config.py
+
+### 1. Purpose
+config.py centralizes all runtime settings and environment variables.
+It prevents hardcoded secrets and deployment values from being scattered across the codebase.
+The file is essential for controlling database URLs, auth secrets, CORS settings, vector store paths, model settings, and logging levels.
+It also makes the backend portable across local development, CI, and production.
+The application should never guess configuration values.
+It should always read them from a validated settings object.
+This file becomes the contract between deployment and code.
+It should validate presence, types, and defaults.
+If configuration is invalid, startup should fail early and clearly.
+The frontend depends on settings indirectly through API behavior, tokens, and response metadata.
+Because the backend may eventually run in containers, config.py should support environment variable overrides.
+It should also support safe defaults for local development.
+The file should be small but comprehensive.
+It should define a single settings object that other modules import.
+That avoids repeating os.environ access throughout the codebase.
+The module can use pydantic-settings for validation and convenience.
+It should contain all secrets needed by auth and agent components.
+It should also define operational values like token expiration and allowed origins.
+It should specify file paths for charts, uploads, logs, and vector indexes.
+It should support feature toggles for optional components like RAG or analytics caching.
+It should be the place to configure rate limits if a limiter is added.
+It should include the app version and environment name for telemetry.
+It should be deterministic and side-effect free apart from reading environment values.
+That makes tests and local bootstrapping predictable.
+
+### 2. Responsibilities
+- Load environment variables.
+- Validate required secrets.
+- Provide defaults for development.
+- Normalize paths and URLs.
+- Expose a typed settings object.
+- Define feature flags.
+- Define token expiration values.
+- Define CORS origins.
+- Define model and vector store paths.
+- Avoid business logic.
+
+### 3. Internal Components
+- Settings class.
+- Derived properties such as database_url and cors_origins.
+- Environment name.
+- JWT secret and algorithm settings.
+- Token expiry settings.
+- LLM provider settings.
+- File system directories for static outputs.
+- Logging level.
+- Optional debug flags.
+
+### 4. Data Flow
+- Process starts.
+- config.py reads environment variables.
+- A settings object is created.
+- server.py imports settings.
+- Other modules read the same settings object.
+- The app behaves according to those values.
+
+### 5. Function-Level Breakdown
+- get_settings(): returns the singleton settings object or cached settings instance.
+- parse_cors_origins(): converts string env vars into lists.
+- resolve_path(): normalizes output or database paths.
+- validate_required_secrets(): asserts presence of production secrets.
+
+### 6. Integration with Other Files
+- server.py uses settings for app metadata and middleware.
+- utils/db.py uses settings for DATABASE_URL.
+- utils/auth.py uses JWT secret and token expiration values.
+- controller routers use settings for feature flags.
+- agent/orchestrator.py uses model provider and temperature settings.
+- tools/viz_engine.py uses chart output paths.
+- tools/rag_engine.py uses index paths and embedding model names.
+
+### 7. Example Request/Response
+- Example derived config values:
+  {
+    "environment": "development",
+    "database_url": "sqlite:///metadata.db",
+    "allowed_origins": ["http://localhost:5173"]
+  }
+
+### 8. Edge Cases & Failure Handling
+- Missing JWT secret in production must fail startup.
+- Invalid numeric values should be rejected by validation.
+- Comma-separated origin lists must be parsed safely.
+- Relative paths should be resolved consistently.
+- Empty environment variables should not silently override defaults.
+
+### 9. Security Considerations
+- Do not print secrets in logs.
+- Keep production secret keys strong and unique.
+- Separate development defaults from production requirements.
+- Avoid permissive CORS in non-development deployments.
+- Make token expiration configurable but bounded.
+
+### 10. Scalability Notes
+- Central config simplifies multi-environment deployment.
+- Feature flags allow gradual rollout of expensive capabilities.
+- Path-based settings support externalized storage later.
+- Using a typed settings object reduces runtime surprises as the codebase grows.
+
+
+## File: utils/auth.py
+
+### 1. Purpose
+utils/auth.py provides authentication helpers for password hashing, verification, JWT creation, JWT decoding, and user identity extraction.
+It is the security boundary for login and signup flows.
+It should be used by controller/auth_router.py and by any route that requires user identity.
+It should not contain route handlers itself.
+It should also not know about frontend details.
+Its job is to turn login credentials into secure tokens and to verify them later.
+The module helps enforce a consistent authentication standard across the app.
+The frontend login_signup page needs this module-backed flow to stop being static and become functional.
+The auth helpers must be deterministic and well tested.
+Passwords must never be stored in plaintext.
+JWT claims must be minimal and auditable.
+Token expiration must be enforced.
+The module should also provide optional dependency helpers that extract the current user from the Authorization header.
+That makes route protection easy.
+It should support future refresh token patterns if needed.
+It should support role claims if admin or auditor features are added.
+It should be the only place where password hashing algorithms are chosen.
+It should be careful about error messages so attackers cannot infer whether an email exists.
+It should also support token revocation strategies if the product grows.
+At minimum, it should support signup, login, authenticated access, and token verification.
+It may use bcrypt through passlib or equivalent tooling.
+It should choose a stable JWT algorithm such as HS256 for development or asymmetric keys for a more advanced deployment.
+The module should surface typed helper functions rather than ad hoc code sprinkled across routes.
+Because the frontend has a login page, auth must be production-grade enough to protect query history and user-specific dashboards.
+
+### 2. Responsibilities
+- Hash passwords securely.
+- Verify passwords against stored hashes.
+- Create signed JWTs.
+- Decode and validate JWTs.
+- Enforce token expiry.
+- Extract current user from bearer tokens.
+- Optionally support refresh or role claims.
+- Provide clear auth exceptions.
+
+### 3. Internal Components
+- password hashing context.
+- token creation function.
+- token decoding function.
+- bearer token dependency.
+- current user dependency.
+- optional scopes or role check helpers.
+
+### 4. Data Flow
+- User signs up.
+- Password is hashed.
+- Hash is stored in the database.
+- User logs in.
+- Password is verified.
+- JWT is generated and returned.
+- Frontend stores the token.
+- Subsequent requests send Authorization: Bearer <token>.
+- The backend validates token and injects the current user into the route.
+
+### 5. Function-Level Breakdown
+- hash_password(password): returns a secure password hash.
+- verify_password(plain, hashed): returns True or False.
+- create_access_token(subject, expires_delta, claims): returns encoded JWT.
+- decode_access_token(token): returns claims or raises auth error.
+- get_current_user(token, db): returns the authenticated user record.
+- require_active_user(user): rejects disabled or deleted accounts.
+
+### 6. Integration with Other Files
+- controller/auth_router.py uses hash_password and create_access_token.
+- controller/query_router.py uses get_current_user.
+- controller/history_router.py uses user identity to filter records.
+- controller/notification_router.py uses user identity to scope rules.
+- model/db_models.py stores the password hash.
+- config.py provides secret key, algorithm, and expiry settings.
+
+### 7. Example Request/Response
+- Example signup input:
+  {
+    "name": "Alex Rivera",
+    "email": "alex@example.com",
+    "password": "StrongPassword123!"
+  }
+- Example login response:
+  {
+    "access_token": "eyJhbGciOi...",
+    "token_type": "bearer"
+  }
+
+### 8. Edge Cases & Failure Handling
+- Wrong password should return a generic invalid credentials message.
+- Expired token should return 401 with a clear reason.
+- Tampered token should be rejected.
+- Missing Authorization header should be rejected on protected routes.
+- Disabled user accounts should not receive tokens.
+- Duplicate email during signup should return a conflict error.
+
+### 9. Security Considerations
+- Use strong password hashing with a dedicated algorithm and per-password salt.
+- Never log raw passwords or tokens.
+- Use short-lived access tokens.
+- Validate issuer and audience claims if configured.
+- Keep JWT payload minimal.
+- Return generic errors for failed logins.
+- Prefer HTTPS in production so tokens are not exposed in transit.
+
+### 10. Scalability Notes
+- Stateless JWTs scale well across multiple backend instances.
+- Token verification is cheap and suitable for high request volume.
+- If revocation becomes necessary, add a token blacklist or short refresh strategy.
+- Keeping auth helpers isolated makes it easier to swap algorithms later.
+
+
+## File: utils/logger.py
+
+### 1. Purpose
+utils/logger.py configures application logging.
+Its purpose is to produce structured, consistent logs for debugging, auditability, and performance visibility.
+This module should unify request logs, error logs, agent traces, and background operation logs.
+It should support human-readable development logs and machine-parsable production logs.
+The frontend does not read this module directly, but the backend depends on it for observability.
+The query pipeline is complex enough that logs need correlation identifiers.
+This file should define log formatting, levels, handlers, and optional JSON output.
+It should also make it easy to attach request IDs to log records.
+That helps trace a frontend request through controller, agent, and tool layers.
+The module should be imported early by server.py.
+It should avoid side effects that make tests brittle.
+It should be configurable through environment settings.
+It should also support masking or filtering sensitive data.
+If query text is logged, it should be handled carefully because it may contain secrets or personal data.
+The logger should not overwhelm stdout with noisy debug messages in production.
+It should provide a standard logger object for reuse across the codebase.
+It may also expose helpers for timing operations.
+Because analytics and query execution can be expensive, logs should record duration and status.
+This module should keep logging behavior deterministic and easy to extend.
+
+### 2. Responsibilities
+- Configure root and application loggers.
+- Define log level and format.
+- Support request IDs and correlation IDs.
+- Support structured logs.
+- Optionally support colored dev logs.
+- Redact secrets from output.
+- Provide helper wrappers for timing and error logging.
+
+### 3. Internal Components
+- logger factory.
+- formatter.
+- stream handler.
+- optional file handler.
+- context variable for request IDs.
+- filter for redaction.
+- helper for retrieving module-scoped loggers.
+
+### 4. Data Flow
+- server.py initializes logging.
+- request middleware assigns request IDs.
+- routers and tools emit logs through the shared logger.
+- logs are written to stdout or files.
+- observability tools or local terminals consume them.
+
+### 5. Function-Level Breakdown
+- setup_logging(): configures handlers and formatters.
+- get_logger(name): returns a child logger.
+- set_request_id(value): binds request scope.
+- clear_request_id(): removes request scope after a request.
+- log_exception(error, context): emits sanitized error output.
+- log_timing(operation, start, end, metadata): records latency.
+
+### 6. Integration with Other Files
+- server.py uses setup_logging at startup.
+- controller routers use get_logger for route tracing.
+- agent/orchestrator.py uses logger to record tool chains.
+- tools modules use logger to record execution steps and warnings.
+- utils/db.py can log connection status.
+
+### 7. Example Request/Response
+- Example structured log line:
+  {
+    "request_id": "req-123",
+    "route": "/api/query",
+    "status": 200,
+    "duration_ms": 243
+  }
+
+### 8. Edge Cases & Failure Handling
+- Logging failures should not break request handling.
+- File handler permission errors should degrade gracefully to stdout.
+- Excessively large payloads should be truncated in logs.
+- Sensitive tokens should be redacted.
+- Multi-line exceptions should remain readable.
+
+### 9. Security Considerations
+- Never log raw JWTs, passwords, or API keys.
+- Redact credentials from database URLs.
+- Limit verbose debug logging in production.
+- Treat query text as potentially sensitive.
+
+### 10. Scalability Notes
+- Structured logs improve traceability when multiple workers are deployed.
+- Correlation IDs are essential for distributed debugging.
+- Centralized logging simplifies alerting and performance analysis.
+
+
+## File: model/schemas.py
+
+### 1. Purpose
+model/schemas.py defines the Pydantic request and response contracts for the backend.
+It is the validation layer between the frontend and backend logic.
+Every endpoint should use these schemas instead of raw dictionaries where possible.
+This file ensures consistent payload shapes, type coercion, and documentation generation.
+It is crucial for preventing malformed requests from reaching business logic.
+The frontend pages need matching schemas so the API responses are predictable.
+The query page needs a request model for natural-language queries.
+The auth page needs login and signup request models.
+The dashboard needs project and metric response models.
+The history page needs audit trail models.
+The analytics and notifications pages need telemetry and rule models.
+This file should not perform database operations.
+It should not implement side effects.
+Its job is pure schema declaration.
+It should also contain nested response objects for complex API payloads.
+It should specify examples where useful for API docs.
+It should validate required fields and allowed enum values.
+It should prevent the backend from accepting ambiguous input.
+If optional fields are used, their defaults should be explicit.
+The response models should reflect the exact data the frontend will render.
+This includes counts, timestamps, chart series, and execution traces.
+The file should be organized by feature area.
+Auth schemas, project schemas, query schemas, history schemas, analytics schemas, and notification schemas should all be easy to find.
+The schemas should be stable so the frontend can consume them over time.
+When the backend grows, the schemas file is where compatibility is preserved.
+
+### 2. Responsibilities
+- Define all request models.
+- Define all response models.
+- Validate query, auth, analytics, and notification payloads.
+- Generate clear API documentation.
+- Provide examples for frontend integration.
+- Enforce required and optional field semantics.
+
+### 3. Internal Components
+- LoginRequest.
+- SignupRequest.
+- TokenResponse.
+- QueryRequest.
+- QueryResponse.
+- ProjectSummary.
+- MetricsResponse.
+- HistoryItem.
+- HistoryResponse.
+- AnalyticsTelemetry.
+- NotificationRule.
+- NotificationLog.
+- SystemHealthResponse.
+- GenericErrorResponse.
+- AgentTrace and ToolInvocation models.
+
+### 4. Data Flow
+- FastAPI receives JSON input.
+- Pydantic validates and coerces the payload.
+- The controller receives a typed object.
+- Business logic produces typed response data.
+- FastAPI serializes the response model.
+- The frontend consumes a predictable JSON structure.
+
+### 5. Function-Level Breakdown
+- No imperative functions are required in most cases.
+- Optional helper validators can normalize sources, project IDs, and dates.
+- Optional model methods can generate safe display labels or derived values.
+- Field validators can ensure query strings are non-empty and not overly long.
+- Nested response builders can organize tool traces and chart metadata.
+
+### 6. Integration with Other Files
+- Used by every controller route.
+- Used by agent/orchestrator.py for typed internal handoff if desired.
+- Used by utils/auth.py for token-related response models.
+- Used by model/db_models.py conceptually to keep schema names aligned with tables.
+- Used by the frontend via the OpenAPI contract.
+
+### 7. Example Request/Response
+- Example query request:
+  {
+    "session_id": "session-001",
+    "project_id": "q4-revenue-analysis",
+    "query": "Show monthly revenue growth for 2024",
+    "sources": ["SQL", "RAG"]
+  }
+- Example query response:
+  {
+    "answer": "Revenue grew 12% quarter-over-quarter.",
+    "chart_url": "/static/charts/revenue.png",
+    "execution_trace": ["sql_engine", "insight_engine", "viz_engine"]
+  }
+
+### 8. Edge Cases & Failure Handling
+- Empty query strings should be rejected.
+- Invalid enums should return validation errors.
+- Optional fields must be clearly documented so the frontend can omit them safely.
+- Date strings should be accepted only in known formats.
+- Large arrays should be bounded to avoid oversized payloads.
+
+### 9. Security Considerations
+- Do not accept arbitrary object payloads when a structured schema exists.
+- Avoid leaking internal fields in response models.
+- Keep token and password fields out of response schemas.
+- Constrain free-form strings with length limits.
+
+### 10. Scalability Notes
+- Strong schemas reduce runtime errors as the API surface grows.
+- Typed responses simplify frontend state management.
+- Schema reuse helps new endpoints remain consistent.
+
+
+## File: model/db_models.py
+
+### 1. Purpose
+model/db_models.py defines the persistent database schema using SQLAlchemy ORM classes.
+It is the source of truth for how user data, query history, projects, alert rules, telemetry, and logs are stored.
+This file is distinct from Pydantic schemas because it describes actual tables rather than API payloads.
+It should be the canonical place where foreign keys, indexes, and relationships are defined.
+The backend cannot support history, analytics, notifications, or authentication without these models.
+The frontend's workspace views need data that must originate from these tables.
+This file should be designed for read-heavy analytics and write-heavy event capture.
+The models should be minimal but complete.
+They must support current frontend features and future product growth.
+This file should be imported by utils/db.py during table initialization.
+It should not contain API route logic.
+It should not contain business logic beyond relationships and maybe simple helper properties.
+The tables should include users, projects, query_logs, alert_rules, notification_logs, system_metrics, and possibly conversation_sessions.
+Each model should include created_at and updated_at fields where appropriate.
+Indexes should support common filtering patterns like user_id, project_id, session_id, and timestamp.
+Relationships should be explicit so joins are easy and reliable.
+If the backend later moves to PostgreSQL, these models should still work with minor adjustments.
+The file also supports auditing because every user query can be logged here.
+The models must be chosen carefully to match the frontend routes and data cards.
+For example, dashboard project cards need fields like name, route_id, status, last_activity, and source types.
+History tables need query text, execution time, sources used, and final status.
+Notifications need rule definitions and dispatch results.
+Analytics need aggregated data or event rows that can be rolled up.
+The file should be stable, explicit, and migration-friendly.
+
+### 2. Responsibilities
+- Define ORM classes for persistent entities.
+- Define primary keys and foreign keys.
+- Define relationships and indexes.
+- Provide audit timestamps.
+- Match the API schema expectations.
+- Keep storage concerns separate from controllers and services.
+
+### 3. Internal Components
+- Base declarative class.
+- User model.
+- Project model.
+- QueryLog model.
+- AlertRule model.
+- NotificationLog model.
+- SystemMetric model.
+- ConversationSession model.
+- Possibly DocumentChunk model for RAG ingest metadata.
+- Index definitions for lookup performance.
+
+### 4. Data Flow
+- Tables are created from metadata during startup or migration.
+- Controllers insert and query ORM objects through sessions.
+- Agent and tools may append query traces and alert events.
+- Analytics endpoints aggregate rows into dashboard metrics.
+- History and notification pages read the resulting rows.
+
+### 5. Function-Level Breakdown
+- ORM classes are the main content.
+- Optional helper methods can compute display labels or status strings.
+- Optional mixins can provide timestamps and soft-delete behavior.
+- Optional classmethods can help create seed fixtures.
+
+### 6. Integration with Other Files
+- utils/db.py creates the engine against these models.
+- utils/auth.py reads and writes the User model.
+- controller/auth_router.py creates users and queries them by email.
+- controller/query_router.py writes QueryLog records.
+- controller/history_router.py reads QueryLog records.
+- controller/notification_router.py writes AlertRule and NotificationLog records.
+- controller/project_router.py reads Project data.
+- controller/analytics_router.py aggregates metrics from these rows.
+
+### 7. Example Request/Response
+- Example user row fields:
+  {
+    "id": 1,
+    "email": "alex@example.com",
+    "hashed_password": "...",
+    "is_active": true
+  }
+- Example query log row fields:
+  {
+    "id": 991,
+    "session_id": "session-001",
+    "query": "Show monthly revenue growth for 2024",
+    "status": "complete"
+  }
+
+### 8. Edge Cases & Failure Handling
+- Duplicate email addresses must be constrained with a unique index.
+- Missing foreign keys should be handled gracefully or prevented by constraints.
+- Deleted projects referenced by history should use soft-delete or null-safe relations if needed.
+- Large history tables require indexes and pagination.
+- Timestamps must be timezone-consistent.
+
+### 9. Security Considerations
+- Password hashes only, never plaintext passwords.
+- Sensitive audit fields should not be exposed directly without authorization.
+- Use foreign keys to reduce data integrity issues.
+- Avoid storing secrets in tables unless absolutely necessary.
+
+### 10. Scalability Notes
+- Proper indexing is critical for history and analytics queries.
+- Event tables may grow quickly and may later need partitioning.
+- ORM models should support migrations and schema evolution.
+- RAG metadata tables should keep chunk-level lookups efficient.
+
+
+## File: controller/auth_router.py
+
+### 1. Purpose
+controller/auth_router.py provides the authentication API endpoints used by the login and signup UI.
+It should be responsible for turning raw credentials into authenticated sessions.
+The frontend login_signup page must call this router to become functional.
+Without this router, no secure user accounts can exist.
+The router should expose at least signup and login endpoints.
+It may also expose logout, refresh, and current-user endpoints if needed.
+Its job is to validate requests, call auth helpers, interact with the database, and return standardized responses.
+It should not hash passwords inline.
+It should not create JWTs inline.
+It should delegate those tasks to utils/auth.py.
+The router must enforce email uniqueness and password policy.
+It should return safe error messages and proper HTTP statuses.
+It should also be the place where default user records are created if a demo mode is enabled.
+If the backend later supports SSO, this router becomes the integration surface.
+The router should create a strong and predictable auth experience.
+It should be explicit about token type and expiration.
+The signup flow should store the user and issue a token or force login depending on the product decision.
+The login flow should authenticate and issue a token.
+The routes should be versioned and documented.
+The router should remain small and readable.
+
+### 2. Responsibilities
+- Register auth endpoints.
+- Validate signup and login requests.
+- Check for duplicate users.
+- Hash and verify passwords via utils/auth.py.
+- Issue JWT access tokens.
+- Return auth responses in a stable format.
+- Provide optional current-user endpoint.
+- Protect against unsafe account creation and login leakage.
+
+### 3. Internal Components
+- APIRouter instance.
+- Signup handler.
+- Login handler.
+- Optional logout handler.
+- Optional refresh handler.
+- Optional me/current-user handler.
+- Database session dependency.
+- Auth helper function calls.
+
+### 4. Data Flow
+- Frontend submits email, name, and password.
+- Router validates request body.
+- Router queries database for existing account.
+- Router hashes password and inserts user on signup.
+- Router verifies password and creates token on login.
+- Router returns token and user metadata to the frontend.
+- Frontend stores the token and uses it on protected routes.
+
+### 5. Function-Level Breakdown
+- signup_user(payload, db): create a new account.
+- login_user(payload, db): authenticate a user and mint token.
+- get_current_user_route(current_user): return authenticated profile details.
+- logout_user(): optionally instruct client-side token clearing.
+- refresh_token(): optionally rotate tokens.
+
+### 6. Integration with Other Files
+- Uses model/schemas.py for LoginRequest, SignupRequest, and TokenResponse.
+- Uses model/db_models.py for the User ORM model.
+- Uses utils/auth.py for hashing and token creation.
+- Uses utils/db.py for sessions.
+- Uses server.py through router registration.
+
+### 7. Example Request/Response
+- Signup request:
+  {
+    "name": "Alex Rivera",
+    "email": "alex@example.com",
+    "password": "StrongPassword123!"
+  }
+- Signup response:
+  {
+    "access_token": "eyJhbGciOi...",
+    "token_type": "bearer",
+    "user": {
+      "id": 1,
+      "name": "Alex Rivera",
+      "email": "alex@example.com"
+    }
+  }
+- Login response follows the same pattern.
+
+### 8. Edge Cases & Failure Handling
+- Duplicate email should return 409.
+- Invalid password should return 401.
+- Missing required fields should return 422 via schema validation.
+- Disabled accounts should not authenticate.
+- Unexpected DB errors should be sanitized.
+
+### 9. Security Considerations
+- Rate limit login attempts if possible.
+- Never expose whether an email exists via detailed error messages.
+- Issue only short-lived access tokens by default.
+- Use secure password hashing.
+- Require HTTPS in production.
+
+### 10. Scalability Notes
+- Stateless token-based auth scales well.
+- Keeping auth logic isolated makes federated identity easier later.
+- Database lookups should be indexed on email.
+
+
+## File: controller/project_router.py
+
+### 1. Purpose
+controller/project_router.py serves project and workspace metadata to the dashboard and sidebar.
+The frontend dashboard renders project cards and expects project metadata, activity states, and source tags.
+The project sidebar also needs project identity information to render the selected workspace.
+This router is the source of truth for project lists, project details, and possibly project creation or updates.
+It should expose read endpoints at minimum and mutating endpoints if the app allows creating projects.
+It should return the route IDs used by the frontend navigator.
+It should also return status values like Active, Processing, Completed, and Idle.
+This router should hide persistence details and expose a frontend-friendly shape.
+It should also support filtering by user, status, or search term.
+If the dashboard search box is wired later, this router should support query parameters.
+The router may also expose source summaries, last activity timestamps, and project counts.
+Because dashboard cards are static today, the backend must provide data rich enough to replace them.
+This router should be protected if projects are user-specific.
+It should also support future CRUD operations such as rename, archive, and delete.
+The router should be efficient because dashboards often refresh frequently.
+
+### 2. Responsibilities
+- List projects for the current user.
+- Return project details for a given workspace.
+- Support dashboard metadata such as status and last activity.
+- Support filters and search.
+- Optionally support create, rename, and archive.
+- Keep response shapes aligned with dashboard UI needs.
+
+### 3. Internal Components
+- APIRouter instance.
+- List projects handler.
+- Project detail handler.
+- Optional search handler.
+- Optional create/update handler.
+- Optional source summary helper.
+
+### 4. Data Flow
+- Frontend dashboard requests project list.
+- Router validates authentication if required.
+- Router queries Project ORM rows.
+- Router maps rows to summary objects.
+- Router returns a list of cards.
+- Sidebar selects one project and requests detail metadata.
+
+### 5. Function-Level Breakdown
+- list_projects(user, db): return project summaries.
+- get_project(project_id, user, db): return one project.
+- create_project(payload, user, db): insert a new project.
+- update_project(project_id, payload, user, db): modify metadata.
+- archive_project(project_id, user, db): soft-delete or archive.
+
+### 6. Integration with Other Files
+- Uses model/schemas.py for ProjectSummary and project detail schemas.
+- Uses model/db_models.py for Project ORM model.
+- Uses utils/db.py for database sessions.
+- May use utils/auth.py to scope data by current user.
+- server.py registers the router.
+
+### 7. Example Request/Response
+- Example response:
+  {
+    "projects": [
+      {
+        "route_id": "q4-revenue-analysis",
+        "name": "Q4 Revenue Analysis",
+        "status": "Active",
+        "last_activity": "2 mins ago",
+        "sources": ["SQL", "RAG"]
+      }
+    ]
+  }
+
+### 8. Edge Cases & Failure Handling
+- Unknown project IDs should return 404.
+- Empty project list should still return a valid response.
+- Search queries should be sanitized and bounded.
+- Archived projects should not appear in active lists unless requested.
+
+### 9. Security Considerations
+- Only return projects owned by or shared with the current user.
+- Do not leak project metadata across tenants.
+- Validate that route IDs cannot be used to access unauthorized workspaces.
+
+### 10. Scalability Notes
+- Project lists should be pageable when counts rise.
+- Search should use indexed columns or full-text mechanisms later.
+- Cacheable metadata can reduce dashboard load.
+
+
+## File: controller/query_router.py
+
+### 1. Purpose
+controller/query_router.py is the most important application router because it powers the Query page and the agentic execution pipeline.
+It receives natural-language questions from the frontend and coordinates the full reasoning flow.
+The router should validate the input, authenticate the user, load session or conversation memory, and hand the request to agent/orchestrator.py.
+It should not itself reason about the answer.
+Its job is orchestration and response shaping.
+This router binds the browser UI to the LLM planner and downstream tools.
+It must support source selection such as SQL, RAG, or hybrid mode.
+It must also support returning an execution trace and chart URL when available.
+The route should be deterministic in how it logs and persists the request, even if the agent reasoning is not deterministic.
+It should write query logs for audit and history pages.
+It should convert internal agent outputs into a stable API response.
+It should preserve a request ID and session ID across the pipeline.
+It should gracefully handle retries, tool errors, and no-answer situations.
+It should support long-running requests only if the deployment allows it.
+Otherwise it should provide timeouts and clear failure messages.
+This router is where the browser's text area becomes a real intelligence request.
+It should support streaming later if needed, but a standard JSON response is sufficient for initial implementation.
+The file must also decide whether to run a query in background or synchronous mode.
+The frontend can use it for single-turn exploration as well as project-specific analysis.
+Because the query page includes source chips like SQL, NoSQL, and Vector, the request schema should preserve those source preferences.
+The router should also allow project context to bias the agent to the right dataset.
+If the agent produces visualizations, the router should include the chart path or URL.
+If the agent produces multiple results, the router should return them in structured form.
+
+### 2. Responsibilities
+- Accept natural-language query requests.
+- Authenticate and authorize the caller.
+- Load session history and project context.
+- Call the agent orchestrator.
+- Persist query logs.
+- Return text, traces, chart URLs, and metadata.
+- Handle agent errors cleanly.
+- Support source filters and project scoping.
+
+### 3. Internal Components
+- APIRouter instance.
+- Query POST handler.
+- Optional streaming handler.
+- Optional cancellation or polling handler.
+- DB session dependency.
+- Current user dependency.
+- Agent orchestrator call.
+- Logging and persistence helper.
+
+### 4. Data Flow
+- Browser sends query text and selected sources.
+- Router validates the payload.
+- Router loads the authenticated user and project context.
+- Router fetches recent memory from the session store.
+- Router calls agent/orchestrator.py with query, context, and source hints.
+- Agent returns answer, trace, tool outputs, and optional chart reference.
+- Router stores the full interaction in QueryLog.
+- Router returns the API response to the frontend.
+
+### 5. Function-Level Breakdown
+- execute_query(payload, user, db): main request entry.
+- build_query_context(user, payload, db): gathers history and project data.
+- persist_query_log(result, db): stores the audit record.
+- format_query_response(agent_result): converts internal result to public schema.
+- handle_query_error(error): maps exceptions to user-safe responses.
+
+### 6. Integration with Other Files
+- Uses model/schemas.py for QueryRequest and QueryResponse.
+- Uses agent/orchestrator.py for planning and tool execution.
+- Uses agent/memory.py for session context.
+- Uses utils/db.py for log persistence.
+- Uses model/db_models.py for QueryLog and related records.
+- May use tools/viz_engine.py indirectly through the orchestrator.
+- May use utils/auth.py for authentication dependency.
+
+### 7. Example Request/Response
+- Example request:
+  {
+    "session_id": "session-001",
+    "project_id": "q4-revenue-analysis",
+    "query": "Why did conversion drop in March?",
+    "sources": ["SQL", "RAG"]
+  }
+- Example response:
+  {
+    "answer": "Conversion dropped because checkout abandonment increased in week 2 and the March campaign underperformed.",
+    "chart_url": "/static/charts/conversion_march.png",
+    "execution_trace": [
+      "sql_engine: conversion_metrics",
+      "insight_engine: anomaly_detect",
+      "rag_engine: campaign_context"
+    ],
+    "confidence": 0.98
+  }
+
+### 8. Edge Cases & Failure Handling
+- Empty query should return validation error.
+- Query too long should be rejected or truncated safely.
+- Tool failures should be retried selectively and bounded.
+- SQL generation should never execute unsafe statements.
+- No results found should return a helpful answer rather than an empty crash.
+- Timeouts should be reported clearly.
+- Partial tool failures should be included in the execution trace.
+
+### 9. Security Considerations
+- Enforce auth before query execution.
+- Never allow arbitrary SQL execution without validation.
+- Do not expose internal prompt contents in the response.
+- Treat uploaded or referenced documents as untrusted.
+- Mask sensitive data in logs when possible.
+
+### 10. Scalability Notes
+- Query logging can become high volume and may need async persistence later.
+- Long agent chains should have time budgets.
+- Caching repeated analytical results can reduce load.
+- Streaming responses may be added later without changing the core request contract.
+
+
+## File: controller/history_router.py
+
+### 1. Purpose
+controller/history_router.py exposes the audit trail of past user queries and system actions.
+This router powers the History page in the frontend.
+Its responsibility is to retrieve stored query logs, format them for the UI, and support filtering or pagination.
+The history view needs query text, timestamps, project labels, engine types, and status values.
+This router should not recompute answers.
+It only reads stored operational records.
+It may also expose endpoints to inspect a single historical interaction in detail.
+It should support user-specific filtering so a person only sees their own history unless the product allows shared workspaces.
+Because history can grow quickly, the router must page results and support date filters.
+It should also support searching by query text and perhaps by project or tool used.
+It is a key part of the product's transparency and trust.
+Every query should be auditable through this route.
+The frontend currently shows static history rows, so the backend must replace them with real records.
+This router also provides data for troubleshooting and support workflows.
+If a query fails, the failure should still appear in history with a status of failed.
+That helps users understand what happened and helps engineers diagnose problems.
+The router should return timestamps in a format the frontend can display without guessing.
+It should preserve the original execution metadata as much as possible.
+
+### 2. Responsibilities
+- Return query history lists.
+- Return individual history records.
+- Support pagination, filters, and search.
+- Return status, project, and engine metadata.
+- Provide audit visibility into agent execution.
+
+### 3. Internal Components
+- APIRouter instance.
+- History list handler.
+- History detail handler.
+- Search and filter helpers.
+- Pagination helpers.
+
+### 4. Data Flow
+- Query router persists a QueryLog.
+- History router reads QueryLog rows.
+- Records are filtered by user and project.
+- Pagination and sorting are applied.
+- A list response is returned to the frontend.
+
+### 5. Function-Level Breakdown
+- list_history(user, db, filters): returns paged rows.
+- get_history_item(id, user, db): returns one audit row.
+- search_history(term, user, db): returns matching rows.
+- build_history_item(row): maps ORM to response schema.
+
+### 6. Integration with Other Files
+- Uses model/db_models.py QueryLog model.
+- Uses model/schemas.py HistoryItem and HistoryResponse.
+- Uses utils/db.py for database access.
+- Uses utils/auth.py to scope data to the current user.
+- Query router writes the data this router reads.
+
+### 7. Example Request/Response
+- Example response item:
+  {
+    "id": 1,
+    "query": "Show monthly revenue growth for 2024",
+    "date": "Oct 24",
+    "time": "14:20",
+    "project": "Revenue",
+    "type": "Hybrid",
+    "status": "Complete"
+  }
+
+### 8. Edge Cases & Failure Handling
+- Empty history should return an empty list, not an error.
+- Invalid page numbers should be normalized.
+- Missing records should return 404 for detail endpoints.
+- Deleted or archived projects should not break history views.
+
+### 9. Security Considerations
+- History must be scoped by user or workspace permissions.
+- Sensitive query contents should be protected.
+- Do not expose internal debug traces unless authorized.
+
+### 10. Scalability Notes
+- History tables can become large quickly.
+- Indexes on timestamp, user_id, and project_id are necessary.
+- Cursor pagination may be preferable at larger scales.
+
+
+## File: controller/analytics_router.py
+
+### 1. Purpose
+controller/analytics_router.py serves telemetry and operational analytics for the dashboard analytics page.
+It provides the numeric and trend data used for chart rendering and KPI cards.
+The frontend analytics page displays metrics like revenue, latency, queries, and sources.
+This router should compute or retrieve those metrics from the database and system counters.
+It should not render charts itself; that belongs to the frontend or viz engine.
+The router should return clean datasets that can be charted easily.
+It should also support time windows such as last 7 days, last 30 days, or custom ranges.
+It may aggregate query volume, average latency, source mix, success rate, and error rate.
+It may also provide operational health metrics like uptime and active sessions.
+The data returned here should be consistent across refreshes and suitable for trend visualization.
+Because the frontend uses static bars and cards now, this router should define the real payload shape those elements consume.
+It may also expose system metrics that are periodically snapshot in the database.
+It should optionally cache expensive aggregations.
+This router is read-heavy and should stay performant.
+If a metric is not available, the router should say so explicitly rather than inventing values.
+The analytics page must be grounded in actual backend state.
+
+### 2. Responsibilities
+- Return telemetry datasets.
+- Aggregate query and system metrics.
+- Support time filtering.
+- Return source mix percentages.
+- Return latency and throughput trends.
+- Support dashboard KPI cards.
+
+### 3. Internal Components
+- APIRouter instance.
+- Telemetry summary handler.
+- Time-series handler.
+- Aggregation helpers.
+- Optional cache layer.
+
+### 4. Data Flow
+- Query logs and system metrics are stored over time.
+- Router aggregates those rows by day, hour, or selected range.
+- Router computes card values and trend lines.
+- Router returns analytics JSON to the frontend.
+
+### 5. Function-Level Breakdown
+- get_telemetry(user, db, range): returns dashboard metrics.
+- build_throughput_series(rows): converts rows into chart data.
+- build_source_mix(rows): computes percentages.
+- build_latency_stats(rows): computes averages and percentiles.
+- build_revenue_summary(rows): returns business KPI if available.
+
+### 6. Integration with Other Files
+- Uses model/db_models.py for QueryLog and SystemMetric.
+- Uses model/schemas.py for AnalyticsTelemetry and related models.
+- Uses utils/db.py for sessions.
+- Uses controller/query_router.py logs as the raw source of many aggregates.
+- May use tools/insight_engine.py for advanced statistical summaries.
+
+### 7. Example Request/Response
+- Example response:
+  {
+    "revenue": {"value": "$4.2M", "delta": "+12%"},
+    "latency_ms": {"value": 142, "delta": "-18%"},
+    "queries": {"value": 18400, "delta": "+3%"},
+    "source_mix": [
+      {"name": "SQL Query", "value": 54},
+      {"name": "Vector Search", "value": 28},
+      {"name": "Document RAG", "value": 18}
+    ]
+  }
+
+### 8. Edge Cases & Failure Handling
+- No telemetry data should return zeros or empty series with explicit labeling.
+- Time range with no data should not crash chart consumers.
+- Negative or malformed ranges should be rejected.
+- Large aggregation windows should be optimized.
+
+### 9. Security Considerations
+- Do not expose internal infrastructure identifiers unless intended.
+- Protect user-level metrics if they reveal private activity.
+- Aggregate data carefully before returning it.
+
+### 10. Scalability Notes
+- Analytics endpoints are good candidates for caching.
+- Materialized aggregates or summary tables can reduce load.
+- Time-series growth may require rollups later.
+
+
+## File: controller/notification_router.py
+
+### 1. Purpose
+controller/notification_router.py manages alert rules, thresholds, and dispatch logs for the Notification Center page.
+It is responsible for creating, listing, updating, and deleting automation rules.
+It also provides the dispatch logs that show whether alerts were delivered, seen, or failed.
+The frontend notifications page currently shows active automations and audit logs as static UI elements.
+This router must replace that static content with real backend state.
+It should support threshold-based alerts such as revenue below a target or anomaly detection on data sources.
+It should also allow system notifications such as sync completed or security login events.
+The router is the control point for rule configuration.
+It should save rules durably and record every trigger event.
+It may also interface with a background scheduler or worker queue.
+The router should distinguish between rule definition and rule execution.
+Users create rules through the API, and background jobs later evaluate them.
+Dispatch logs should capture target channel, execution time, and status.
+This route family is important for operational awareness and user trust.
+It should be user-scoped and project-scoped when needed.
+It must be clear, consistent, and auditable.
+
+### 2. Responsibilities
+- Create alert rules.
+- List alert rules.
+- Update or disable rules.
+- Return dispatch logs.
+- Optionally trigger immediate test dispatches.
+- Support paging and filtering.
+
+### 3. Internal Components
+- APIRouter instance.
+- Rule CRUD handlers.
+- Dispatch log list handler.
+- Rule evaluation helper.
+- Optional background job enqueue helper.
+
+### 4. Data Flow
+- User submits an alert threshold.
+- Router validates and stores the rule.
+- Background evaluation detects a match or user triggers a test.
+- A dispatch record is written.
+- The frontend fetches rules and logs from the router.
+
+### 5. Function-Level Breakdown
+- create_rule(payload, user, db): store a new alert rule.
+- list_rules(user, db): return active rules.
+- update_rule(rule_id, payload, user, db): modify a rule.
+- delete_rule(rule_id, user, db): disable or remove a rule.
+- list_logs(user, db): return recent dispatch events.
+- trigger_test(rule_id, user, db): simulate dispatch if supported.
+
+### 6. Integration with Other Files
+- Uses model/db_models.py for AlertRule and NotificationLog.
+- Uses model/schemas.py for notification request and response models.
+- Uses utils/db.py for database sessions.
+- May use utils/auth.py for user scoping.
+- May be called by tools/action_engine.py or background evaluators.
+
+### 7. Example Request/Response
+- Example rule request:
+  {
+    "metric": "monthly_revenue",
+    "operator": "<",
+    "threshold": 50000,
+    "action": "email"
+  }
+- Example logs response:
+  {
+    "logs": [
+      {"id": "LOG-902", "event": "Revenue Threshold Met", "target": "Email", "status": "Delivered"}
+    ]
+  }
+
+### 8. Edge Cases & Failure Handling
+- Invalid operators should be rejected.
+- Thresholds should be validated for type and range.
+- Disabled rules should not trigger dispatches.
+- Delivery failures should be recorded, not hidden.
+
+### 9. Security Considerations
+- Users should only manage their own rules.
+- Do not allow arbitrary code execution in alert conditions.
+- Validate target channels and notification destinations.
+- Store only necessary contact data.
+
+### 10. Scalability Notes
+- Alert evaluation may move to a worker queue later.
+- Logs should be pageable and index-backed.
+- High-frequency rule evaluation may need batching.
+
+
+## File: agent/orchestrator.py
+
+### 1. Purpose
+agent/orchestrator.py is the brain of the backend.
+It coordinates the reasoning loop that chooses tools, gathers observations, and synthesizes a final answer.
+This is the file that makes the backend an agent rather than a plain API wrapper.
+The orchestrator should receive a query plus context and return a structured result.
+It should not directly expose the frontend or database layer.
+It should orchestrate tools such as SQL execution, insight analysis, rag retrieval, visualization, and action rule writing.
+The orchestrator must keep the model in planning mode and keep execution deterministic through tools.
+It should also maintain tool execution order, retries, and trace capture.
+If the model produces invalid instructions, the orchestrator should reject or repair them.
+It should support source restrictions so the request can use SQL, RAG, or other allowed tools only.
+It should support intermediate observations and final synthesis.
+It should be able to run in a bounded number of iterations.
+It should also capture confidence or certainty signals if the model can provide them.
+The file is the core integration point between language understanding and concrete backend actions.
+It must be carefully designed because mistakes here propagate to query answers, charts, and logs.
+It should be stateless or nearly stateless except for memory passed in explicitly.
+The orchestrator should be testable with mocked tools.
+It should also support deterministic prompt templates from agent/prompts.py.
+The frontend query page, history page, analytics page, and notifications page all depend on this orchestrator in different ways.
+The orchestrator can return both text and structured artifacts.
+It should record which tool produced which piece of evidence.
+This is the place where natural language becomes a safe execution plan.
+
+### 2. Responsibilities
+- Receive the query, user, project, and memory context.
+- Build the planning prompt.
+- Select and invoke tools.
+- Enforce iteration and retry limits.
+- Capture execution traces.
+- Synthesize final answer text.
+- Return structured artifacts such as charts or evidence chunks.
+- Reject unsafe tool actions.
+
+### 3. Internal Components
+- Orchestrator class or top-level run_query function.
+- Tool registry.
+- Planning prompt builder.
+- Execution loop.
+- Observation collector.
+- Final answer synthesizer.
+- Error recovery logic.
+- Trace model or trace collector.
+
+### 4. Data Flow
+- Query router passes request and context into orchestrator.
+- Orchestrator builds prompt using memory and system instructions.
+- LLM emits a tool selection or reasoning step.
+- Orchestrator dispatches the selected tool.
+- Tool returns an observation.
+- Orchestrator appends the observation and continues or stops.
+- Final synthesized answer is returned to the query router.
+- Router logs the result and sends it to the frontend.
+
+### 5. Function-Level Breakdown
+- run(query, context, sources): main orchestration entry.
+- build_prompt(context): prepares system and user prompt.
+- execute_tool(name, payload): invokes a registered tool.
+- validate_tool_call(call): checks tool safety and schema.
+- collect_observation(result): stores output in trace.
+- synthesize_answer(trace): converts evidence into final response.
+- handle_retry(error, step): attempts bounded repair.
+
+### 6. Integration with Other Files
+- Uses agent/prompts.py for system instruction templates.
+- Uses agent/memory.py for session context and summary memory.
+- Uses tools/sql_engine.py, insight_engine.py, action_engine.py, viz_engine.py, and rag_engine.py.
+- Uses model/schemas.py if internal typed results are defined.
+- Called by controller/query_router.py.
+- Logs through utils/logger.py.
+
+### 7. Example Request/Response
+- Example internal result:
+  {
+    "answer": "Revenue fell 6.2% in March versus February due to lower electronics sales.",
+    "trace": [
+      {"tool": "sql_engine", "observation": "monthly revenue rows"},
+      {"tool": "insight_engine", "observation": "anomaly detected"},
+      {"tool": "viz_engine", "observation": "/static/charts/revenue.png"}
+    ]
+  }
+
+### 8. Edge Cases & Failure Handling
+- Invalid tool names should be rejected.
+- Tool output that fails schema validation should not be passed to the final answer unfiltered.
+- The agent should stop after a bounded number of loops.
+- If the SQL tool fails repeatedly, the orchestrator should fall back to an explanation of the failure.
+- If no tool is appropriate, the orchestrator should answer conservatively.
+
+### 9. Security Considerations
+- The model must not be allowed to execute arbitrary code.
+- Tool payloads must be validated before execution.
+- SQL operations must remain read-only unless explicitly approved.
+- Prompt injection from retrieved text must be treated as untrusted.
+- Secrets must never be inserted into prompts.
+
+### 10. Scalability Notes
+- The orchestrator should be modular so tools can be added without rewriting core logic.
+- Bounded loops protect latency.
+- Trace compression may be needed for long sessions.
+- Async tool execution could be introduced later for parallelizable retrieval steps.
+
+
+## File: agent/prompts.py
+
+### 1. Purpose
+agent/prompts.py holds the system prompts and instruction templates that define how the agent should think and act.
+This file is where policy and behavior are expressed in text.
+It is crucial because the quality of the orchestration loop depends on prompt clarity.
+The file should make the agent deterministic, honest, and tool-oriented.
+It should tell the model to avoid guessing, always cite tool outputs, and prefer exactness over fluency.
+It should also define prompts for different task families such as SQL analysis, RAG retrieval, anomaly detection, and alert setup.
+The frontend query experience depends on these prompts being clear enough to generate reliable plans.
+This file should separate reusable prompt fragments from full task prompts.
+It should include safety instructions that prevent direct fabrication of numbers or unsupported claims.
+It should also include format instructions for tool calls and final answers.
+If the backend supports multiple models later, this prompt file can preserve consistent behavior across them.
+The prompts should be concise but strict.
+The file should be easy to test by snapshotting outputs.
+It should not contain runtime logic beyond string assembly.
+It should be versioned carefully because prompt changes can significantly alter agent behavior.
+The file may also store structured templates for query routing decisions.
+It is part of the agent contract, not just text decoration.
+
+### 2. Responsibilities
+- Define the base system prompt.
+- Define specialized prompts by task type.
+- Enforce reasoning and tool-use rules.
+- Provide format instructions for structured outputs.
+- Reduce hallucination and unsafe behavior.
+
+### 3. Internal Components
+- base system prompt.
+- SQL analysis prompt.
+- RAG retrieval prompt.
+- Insight explanation prompt.
+- notification/rule prompt.
+- final synthesis prompt.
+- response formatting instructions.
+
+### 4. Data Flow
+- Orchestrator selects the relevant prompt template.
+- Prompt is filled with user query and context.
+- Prompt is sent to the model.
+- Model returns a tool call plan or final text.
+- Orchestrator uses the output and possibly loops again.
+
+### 5. Function-Level Breakdown
+- build_system_prompt(context): composes the overall behavior prompt.
+- build_sql_prompt(query, schema): instructs SQL reasoning.
+- build_rag_prompt(query, chunks): instructs context summarization.
+- build_final_answer_prompt(trace): instructs synthesis.
+- build_tool_format_instructions(): constrains output structure.
+
+### 6. Integration with Other Files
+- Used by agent/orchestrator.py.
+- May be referenced by tests to ensure prompt snapshots stay stable.
+- May reflect model/schema expectations from model/schemas.py.
+
+### 7. Example Request/Response
+- Example instruction fragment:
+  "Never guess numbers. If evidence is incomplete, say so and ask for a narrower scope."
+
+### 8. Edge Cases & Failure Handling
+- Prompt length must be controlled when context is large.
+- Conflicting instructions should be resolved by precedence rules.
+- Retrieved text containing malicious instructions must be ignored as data, not policy.
+
+### 9. Security Considerations
+- Never include secrets or tokens in prompt text.
+- Treat retrieved documents as untrusted input.
+- Keep internal policies in the system prompt, not user-visible UI text.
+
+### 10. Scalability Notes
+- Prompt templates should be reusable and composable.
+- Versioning prompts makes future behavior changes traceable.
+- Keeping prompts modular simplifies multi-agent expansion.
+
+
+## File: agent/memory.py
+
+### 1. Purpose
+agent/memory.py manages conversational context and short-term memory for the agent.
+It ensures the query experience can remember recent turns while controlling context window size.
+The frontend query page implies a conversational workflow even though the UI is currently stateless.
+This file should implement session-aware memory that stores recent interactions and optionally compressed summaries.
+It should keep the last several messages for continuity and produce a summary when the window grows too large.
+It should not handle persistence details directly unless explicitly designed to.
+If persistence is needed, this file can talk to the database or a cache through clear interfaces.
+The agent memory must be isolated from business records so it cannot corrupt audit logs.
+It is a helper for the orchestrator, not a replacement for the database history table.
+The file should support retrieval by session_id and optionally by project_id.
+It should be safe to clear or reset when a session ends.
+It should also support summary compression so the model remains within context limits.
+Memory should improve continuity without causing leakage across users.
+This file is important for multi-turn analysis and follow-up queries.
+It should be deterministic and bounded.
+The data structure should be easy to serialize and inspect.
+
+### 2. Responsibilities
+- Store recent conversation turns.
+- Retrieve memory by session.
+- Trim history when the limit is exceeded.
+- Summarize old turns into compact state.
+- Reset or clear session memory.
+- Prevent cross-session leakage.
+
+### 3. Internal Components
+- memory store interface.
+- in-memory cache or persistence adapter.
+- summary object.
+- turn list or deque.
+- session lookup helper.
+
+### 4. Data Flow
+- Query router passes session_id and current query.
+- Memory retrieves recent turns.
+- Orchestrator injects memory into prompt context.
+- After the answer, new turn is stored.
+- If memory exceeds the window, older turns are summarized.
+
+### 5. Function-Level Breakdown
+- get_session_memory(session_id): returns recent messages.
+- append_turn(session_id, user_text, assistant_text): stores a new exchange.
+- summarize_session(session_id): compresses older messages.
+- clear_session(session_id): deletes state.
+- build_context(session_id): returns prompt-ready memory text.
+
+### 6. Integration with Other Files
+- Called by controller/query_router.py.
+- Used by agent/orchestrator.py.
+- May persist to the database via model/db_models.py if needed.
+- May depend on utils/logger.py for traceability.
+
+### 7. Example Request/Response
+- Example memory excerpt:
+  {
+    "recent_turns": [
+      {"role": "user", "content": "Show monthly revenue growth for 2024"},
+      {"role": "assistant", "content": "Revenue grew steadily in Q2..."}
+    ],
+    "summary": "User is investigating revenue trends and conversion changes."
+  }
+
+### 8. Edge Cases & Failure Handling
+- Missing session IDs should create a new session or return empty memory.
+- Memory should never mix across users.
+- Summary generation failures should fall back to the raw recent turns.
+- Memory windows that are too large should be trimmed predictably.
+
+### 9. Security Considerations
+- Do not store secrets or credentials in session memory.
+- Respect user boundaries and authentication scope.
+- Treat memory as sensitive because it may contain business context.
+
+### 10. Scalability Notes
+- In-memory storage is fine for development but not for distributed deployments.
+- A shared cache or database-backed memory store may be needed later.
+- Summary compression is essential to keep token usage under control.
+
+
+## File: tools/sql_engine.py
+
+### 1. Purpose
+tools/sql_engine.py executes structured database queries safely.
+It is the tool the agent uses when a user asks for data from SQL-backed sources.
+The tool should translate a validated request into a read-only SQL query, execute it, and return rows in a serializable format.
+This file is critical because SQL access is powerful and dangerous if unbounded.
+It must enforce read-only execution and protect against injection or schema abuse.
+The tool should support schema introspection when the agent needs table names or columns.
+It should also support limits, sorting, and grouping for analytical queries.
+The frontend query page mentions SQL as a selectable source, so this tool must be production-ready.
+The tool should not accept arbitrary write statements.
+It should validate that statements begin with SELECT or an equivalent safe read-only form.
+It should optionally translate natural language into SQL via the model, but the final SQL text must still be checked before execution.
+The tool should return not just raw rows but also metadata such as row count and columns.
+It should use the session from utils/db.py and possibly a read-only database user.
+It should support parameter binding where possible.
+The file should log the executed query for traceability.
+It should be testable against a fixture database.
+The tool should be resilient to empty result sets and malformed queries.
+It may expose helper utilities for schema extraction, query validation, and result serialization.
+This file is the highest-risk execution tool and should be treated with great care.
+
+### 2. Responsibilities
+- Accept a candidate SQL query or query plan.
+- Validate read-only behavior.
+- Execute against the database.
+- Return rows and metadata.
+- Reject unsafe statements.
+- Handle query errors safely.
+
+### 3. Internal Components
+- SQL validator.
+- Query executor.
+- Result serializer.
+- Schema inspector.
+- Optional query reformulation helper.
+- Optional explain-plan helper for debugging.
+
+### 4. Data Flow
+- Orchestrator requests SQL data.
+- Tool receives query spec.
+- Validator ensures the query is safe.
+- Database session executes the query.
+- Rows are fetched and serialized.
+- Result is returned to the orchestrator.
+
+### 5. Function-Level Breakdown
+- run(query_spec, db): main entry.
+- validate_sql(sql): rejects unsafe commands.
+- execute_sql(sql, db): runs the safe query.
+- serialize_rows(result): converts DB rows to JSON-friendly objects.
+- inspect_schema(db): returns table and column metadata.
+
+### 6. Integration with Other Files
+- Uses utils/db.py for sessions or engine access.
+- Uses model/db_models.py if ORM queries are preferred.
+- Called by agent/orchestrator.py.
+- May feed controller/query_router.py responses.
+
+### 7. Example Request/Response
+- Example input:
+  {
+    "sql": "SELECT month, revenue FROM monthly_revenue ORDER BY month"
+  }
+- Example output:
+  {
+    "rows": [
+      {"month": "01", "revenue": 100000},
+      {"month": "02", "revenue": 95000}
+    ],
+    "row_count": 2
+  }
+
+### 8. Edge Cases & Failure Handling
+- Empty result sets should be returned cleanly.
+- Syntax errors should be converted into tool errors.
+- Attempts to run INSERT, UPDATE, DELETE, DROP, or PRAGMA writes should be blocked.
+- Extremely large result sets should be limited.
+- Missing tables should be reported clearly.
+
+### 9. Security Considerations
+- Enforce read-only access.
+- Use parameterization to avoid injection.
+- Do not expose raw schema secrets.
+- Limit query complexity when possible.
+- Restrict access to approved tables if needed.
+
+### 10. Scalability Notes
+- Query timeouts and row limits are necessary for large datasets.
+- Read replicas can later offload analytical queries.
+- Caching common aggregates can improve latency.
+
+
+## File: tools/insight_engine.py
+
+### 1. Purpose
+tools/insight_engine.py performs statistical analysis over retrieved data.
+It turns raw rows into insight-level statements such as growth rates, anomalies, deltas, and trend summaries.
+This tool is useful after the SQL tool returns numeric rows or after RAG returns structured signals.
+The frontend query experience needs an explanation layer, not just raw tables.
+This file is where differences, spikes, outliers, and pattern changes are computed.
+It should use pandas for data shaping and scipy or related libraries for statistical checks.
+It should not execute database queries itself.
+It should work on already-fetched data.
+The tool should be able to compute period-over-period changes, moving averages, z-scores, and simple significance proxies.
+It should return human-readable insight fragments and machine-readable metrics.
+The orchestrator can then weave those outputs into the final answer.
+This tool should be deterministic for a given input dataset.
+It should avoid overly complex statistical claims unless justified.
+It should also clearly indicate when data is insufficient for strong conclusions.
+Because the frontend dashboard and query page imply analytical intelligence, this tool is essential.
+It can also power business KPIs and telemetry insights.
+The file should be robust to missing values and uneven time series.
+It should support grouped calculations by date, category, or source.
+It should return both findings and supporting values.
+
+### 2. Responsibilities
+- Compute metrics and deltas.
+- Detect anomalies or outliers.
+- Summarize trends.
+- Handle missing or sparse data.
+- Return structured analytic findings.
+
+### 3. Internal Components
+- Dataframe builder.
+- Delta calculator.
+- Anomaly detector.
+- Trend summarizer.
+- Statistical threshold helper.
+
+### 4. Data Flow
+- Orchestrator passes a dataset.
+- Tool converts to a dataframe.
+- Calculations are applied.
+- Findings are packaged.
+- Orchestrator uses findings in final response.
+
+### 5. Function-Level Breakdown
+- run(data, spec): main entry.
+- compute_growth(series): returns period-over-period change.
+- detect_anomalies(series): returns outlier indices and scores.
+- summarize_trend(series): returns direction and strength.
+- format_insights(results): creates concise statements.
+
+### 6. Integration with Other Files
+- Called by agent/orchestrator.py.
+- May consume SQL output.
+- May feed analytics_router if reusable.
+- May be combined with viz_engine for charting.
+
+### 7. Example Request/Response
+- Example output:
+  {
+    "trend": "downward",
+    "growth_rate": -6.2,
+    "anomalies": [
+      {"period": "March", "score": 2.8}
+    ]
+  }
+
+### 8. Edge Cases & Failure Handling
+- Null-heavy datasets should return a cautious result.
+- Single-row datasets cannot support trend claims.
+- Outlier detection should be clearly bounded.
+- Non-numeric columns should be ignored or handled separately.
+
+### 9. Security Considerations
+- Do not infer private or sensitive traits from weak data.
+- Keep statistical claims conservative.
+- Avoid presenting correlations as causal facts.
+
+### 10. Scalability Notes
+- Vectorized dataframe operations scale better than loops.
+- Large datasets may need sampling or pre-aggregation.
+- Expensive analytics can be cached when inputs repeat.
+
+
+## File: tools/action_engine.py
+
+### 1. Purpose
+tools/action_engine.py handles agent-triggered actions such as creating threshold alerts or scheduling notifications.
+It is the tool that turns analysis into operational automation.
+The frontend notifications page implies that users can define rules such as revenue thresholds or anomaly triggers.
+This tool should convert those intents into durable alert rules rather than trying to execute them immediately in-line.
+It should validate action definitions and save them through the notification router or database layer.
+It may also be used by the orchestrator when a user asks to create a data alert from plain language.
+The tool should support actions like email, system, Slack, or internal notification channels if implemented.
+It should not dispatch alerts directly unless it also integrates with a worker or task queue.
+Its main job is to define and register the rule.
+The execution of the rule can happen later via scheduled jobs.
+The tool should be explicit about required fields such as metric, operator, threshold, and target channel.
+It should reject ambiguous or unsupported actions.
+It should return confirmation metadata so the frontend can tell the user the rule was created.
+This file bridges analysis and operations.
+It is a controlled mutation tool, so safety matters.
+It should log every created rule.
+It should also support dry-run validation mode if desired.
+
+### 2. Responsibilities
+- Create alert rule definitions.
+- Validate action parameters.
+- Optionally enqueue dispatch jobs.
+- Return rule metadata.
+- Reject ambiguous or unsafe operations.
+
+### 3. Internal Components
+- rule validator.
+- rule formatter.
+- persistence adapter.
+- optional dispatch scheduler adapter.
+
+### 4. Data Flow
+- Orchestrator identifies a rule-creation intent.
+- Tool validates parameters.
+- Rule is stored in the database.
+- Optional notification job is queued.
+- Confirmation is returned to the orchestrator.
+
+### 5. Function-Level Breakdown
+- run(action_spec, db): main entry.
+- validate_rule(spec): checks required fields.
+- save_rule(spec, db): persists alert rule.
+- queue_dispatch(rule): optional async scheduling.
+- format_confirmation(rule): returns user-friendly metadata.
+
+### 6. Integration with Other Files
+- Uses controller/notification_router.py logic or shares helpers with it.
+- Uses model/db_models.py AlertRule and NotificationLog.
+- Called by agent/orchestrator.py.
+- Uses utils/logger.py for auditing.
+
+### 7. Example Request/Response
+- Example input:
+  {
+    "metric": "monthly_revenue",
+    "operator": "<",
+    "threshold": 50000,
+    "action": "email"
+  }
+- Example output:
+  {
+    "rule_id": "ALERT-1001",
+    "status": "created"
+  }
+
+### 8. Edge Cases & Failure Handling
+- Unsupported operators should be rejected.
+- Missing threshold should raise validation errors.
+- Duplicate rules may be merged or rejected based on policy.
+- Scheduling failures should not pretend the rule exists if it was not saved.
+
+### 9. Security Considerations
+- Validate action channels to avoid abuse.
+- Restrict who can create rules.
+- Ensure rule payloads cannot execute code.
+
+### 10. Scalability Notes
+- Rule evaluation is better handled by background workers.
+- Persisted rules should be indexed for efficient evaluation.
+- High-volume notifications may require queueing infrastructure.
+
+
+## File: tools/viz_engine.py
+
+### 1. Purpose
+tools/viz_engine.py generates chart assets from structured data.
+The frontend query flow expects visual artifacts when the answer benefits from a chart.
+This tool should take data and chart preferences, render a chart, save it to a static directory, and return a usable URL.
+It should support common chart types such as line, bar, area, scatter, and pie if appropriate.
+It should not decide business meaning; that is the insight engine's job.
+It should focus on visual representation and file output.
+The output path must be deterministic and safe.
+The frontend can then display the generated image or link.
+The tool should validate data shape before rendering.
+It should handle missing values and empty datasets gracefully.
+It should use a non-interactive plotting backend suitable for servers.
+It should manage file naming to avoid collisions.
+It should also allow cleanup of old charts if retention is needed.
+This tool is important for the analytics page and query responses.
+If the agent is asked for a summary with a chart, this tool is the final visual step.
+It should return both the file path and a public URL.
+It should also annotate metadata such as title, labels, and timestamp.
+The tool must be safe on the backend because plotting can consume memory on large inputs.
+
+### 2. Responsibilities
+- Render charts from data.
+- Save image files safely.
+- Return static URLs.
+- Validate chart type and data shape.
+- Handle empty or malformed datasets.
+
+### 3. Internal Components
+- chart renderer.
+- path generator.
+- static asset resolver.
+- optional cleanup helper.
+- plot styling helpers.
+
+### 4. Data Flow
+- Orchestrator sends structured data and chart intent.
+- Tool validates the data.
+- Plot is rendered with a server-safe backend.
+- Image is saved to disk.
+- Public URL is returned.
+
+### 5. Function-Level Breakdown
+- run(data, chart_spec): main entry.
+- render_chart(data, spec): creates the figure.
+- save_chart(fig, filename): writes image file.
+- build_public_url(filename): returns frontend-friendly URL.
+- clean_old_charts(): optional retention routine.
+
+### 6. Integration with Other Files
+- Called by agent/orchestrator.py.
+- Static path configured via config.py.
+- Public routes may be mounted by server.py.
+- Query router returns the chart URL to the frontend.
+
+### 7. Example Request/Response
+- Example output:
+  {
+    "chart_url": "/static/charts/revenue_2024.png",
+    "chart_type": "bar"
+  }
+
+### 8. Edge Cases & Failure Handling
+- No data should return a clear failure or placeholder.
+- File write permission errors should be handled safely.
+- Excessively large charts should be limited or sampled.
+- Invalid chart types should be rejected.
+
+### 9. Security Considerations
+- Save files only under approved directories.
+- Prevent path traversal through chart names.
+- Do not expose server filesystem layout.
+
+### 10. Scalability Notes
+- Static assets should be offloaded to CDN/object storage later if volume grows.
+- Chart generation should remain lightweight.
+- Cleanup policies prevent disk growth.
+
+
+## File: tools/rag_engine.py
+
+### 1. Purpose
+tools/rag_engine.py performs retrieval augmented generation support.
+It searches ingested documents or knowledge chunks and returns relevant context to the orchestrator.
+The frontend query page explicitly mentions document store and vector search style interactions, so this tool is required.
+It should embed text, search the vector index, and return top matching chunks.
+It should not fabricate answers from documents by itself.
+It should only provide retrieved evidence.
+The orchestrator and prompt templates then decide how to use that evidence.
+This tool is important for answering questions that cannot be resolved from SQL alone.
+It should support document ingestion, indexing, and retrieval.
+It should store or access embeddings via FAISS or another vector index.
+It should work with sentence-transformers or a similar embedding model.
+It should expose metadata such as source document, chunk id, and similarity score.
+It should be careful about prompt injection in retrieved text.
+The retrieved text must be treated as data, not instructions.
+The tool should handle empty indexes gracefully.
+It should also support updating the index when new documents are ingested.
+Because the frontend currently has no document search UI, this backend tool is what makes that capability real.
+It should return enough context for the agent to answer accurately and cite evidence.
+
+### 2. Responsibilities
+- Embed query text.
+- Search a vector index.
+- Return top-k chunks with scores.
+- Support document ingestion and indexing.
+- Handle empty or stale indexes.
+
+### 3. Internal Components
+- embedding model wrapper.
+- vector store client.
+- chunk serializer.
+- ingest helper.
+- search helper.
+- similarity score formatter.
+
+### 4. Data Flow
+- Documents are chunked and embedded during ingestion.
+- Index is stored on disk or in memory.
+- Query text is embedded at runtime.
+- Vector search returns nearest chunks.
+- Chunks are passed to orchestrator for synthesis.
+
+### 5. Function-Level Breakdown
+- run(query, top_k): main retrieval entry.
+- ingest_documents(docs): chunk and embed new documents.
+- search_index(vector): return similar chunks.
+- format_chunks(results): prepare model-readable context.
+- rebuild_index(): refresh the index when needed.
+
+### 6. Integration with Other Files
+- Called by agent/orchestrator.py.
+- Uses config.py for embedding model and index paths.
+- May persist metadata via model/db_models.py.
+- May be exposed through controller/query_router.py indirectly.
+
+### 7. Example Request/Response
+- Example output:
+  {
+    "chunks": [
+      {
+        "source": "campaign_notes.txt",
+        "score": 0.91,
+        "text": "The March checkout flow had a higher abandonment rate..."
+      }
+    ]
+  }
+
+### 8. Edge Cases & Failure Handling
+- Empty index should return no results rather than crash.
+- Corrupt index files should trigger rebuild or clear error.
+- Malicious text in chunks must not become system instructions.
+- Very long documents should be chunked before embedding.
+
+### 9. Security Considerations
+- Treat retrieved documents as untrusted.
+- Restrict ingestion sources to approved locations if needed.
+- Prevent arbitrary file access through document paths.
+
+### 10. Scalability Notes
+- FAISS scales well for moderate vector retrieval workloads.
+- Large corpora may need sharding or external vector DB later.
+- Incremental index updates should be supported if possible.
+
+
+## File: routes/__init__.py or router registry layer
+
+### 1. Purpose
+If the repository retains a routes layer, this file should aggregate router imports and provide a clean registration interface.
+It is optional if server.py directly includes controllers, but the structure suggests a route registry may be useful.
+The purpose is to centralize router composition and keep server.py compact.
+This file can act as a manifest of all API groups.
+It is helpful when the backend grows and needs consistent versioning or conditional route registration.
+It should not contain business logic.
+It should only organize imports and router lists.
+If this layer exists, it makes startup cleaner and testing simpler.
+The frontend does not care about this file directly, but backend maintainability does.
+
+### 2. Responsibilities
+- Group route imports.
+- Expose a single registration function or router list.
+- Keep server.py lean.
+- Support conditional inclusion if feature flags exist.
+
+### 3. Internal Components
+- list of router instances.
+- helper to register all routes.
+
+### 4. Data Flow
+- server.py imports the registry.
+- Registry returns router objects.
+- FastAPI includes them.
+
+### 5. Function-Level Breakdown
+- get_routers(): returns a list of routers.
+- register_all(app): includes every controller router.
+
+### 6. Integration with Other Files
+- References all controller modules.
+- Used only by server.py or tests.
+
+### 7. Example Request/Response
+- Not user-facing.
+
+### 8. Edge Cases & Failure Handling
+- Missing router imports should fail at startup.
+- Duplicate prefixes should be flagged in tests.
+
+### 9. Security Considerations
+- Avoid auto-registering debug routes in production.
+
+### 10. Scalability Notes
+- A registry makes large APIs easier to manage.
+
+
+## Frontend–Backend Consistency Audit
+
+Frontend component to backend endpoint mapping:
+- landing.jsx -> GET /api/system/health, GET /api/projects/featured or GET /api/system/overview, optional POST /api/auth/login redirect target.
+- login_signup.jsx -> POST /api/auth/login, POST /api/auth/signup, optionally GET /api/auth/me.
+- dashboard.jsx -> GET /api/projects, GET /api/metrics/global, GET /api/system/health, optional GET /api/projects/search?q=.
+- navbar.jsx -> GET /api/system/health, GET /api/notifications/unread, GET /api/auth/me.
+- sidebar.jsx -> GET /api/projects/{project_id}, GET /api/system/health.
+- querry.jsx -> POST /api/query, optional GET /api/projects/{project_id}/schema, optional GET /api/sources/available.
+- history.jsx -> GET /api/history, GET /api/history/{id}, optional GET /api/history/search.
+- analytics.jsx -> GET /api/analytics/telemetry, GET /api/analytics/series?range=30d.
+- notifications.jsx -> GET /api/notifications/logs, GET /api/notifications/rules, POST /api/notifications/rules, PATCH /api/notifications/rules/{id}, DELETE /api/notifications/rules/{id}.
+
+Missing backend functionality required by the frontend:
+- Authentication endpoints are absent and must be implemented.
+- Project listing and project detail endpoints are absent and must be implemented.
+- Query execution endpoint is absent and must be implemented.
+- History retrieval endpoint is absent and must be implemented.
+- Analytics telemetry endpoint is absent and must be implemented.
+- Notification rule and dispatch log endpoints are absent and must be implemented.
+- System health endpoint is absent and must be implemented.
+- Database models and persistence layer are absent and must be implemented.
+- Agent orchestration and tools are absent and must be implemented.
+- Static chart serving is absent and must be implemented if visual outputs are returned.
+- Session memory and conversation summary support are absent and must be implemented.
+
+Suggested fixes:
+- Add explicit API versioning under /api/v1 to keep the frontend stable.
+- Implement token-based auth and protect all project, query, history, analytics, and notification routes.
+- Convert dashboard and project metadata from hardcoded frontend values to backend-driven data.
+- Add query logging so the History page reflects real interactions.
+- Add telemetry aggregation so Analytics displays actual trends.
+- Add notification rule CRUD and dispatch logging so the Notification Center is functional.
+- Add health and readiness checks so navbar and sidebar status indicators can reflect the backend state.
+- Add chart storage and serving so query responses can include viz URLs.
+- Add source metadata endpoints if the query UI needs selectable data sources.
+- Add project-scoped context so the workspace routes can show the correct project information.
+
+
+## End-to-End Execution Flow
+
+1. The user opens the Query page in the frontend and enters a natural-language question.
+2. The frontend sends POST /api/query with the query text, optional project_id, selected sources, and session_id.
+3. controller/query_router.py validates the payload and authenticates the user.
+4. The router fetches recent conversation memory from agent/memory.py.
+5. The router loads project context if the query is scoped to a workspace.
+6. The router passes the request, memory, and scope hints to agent/orchestrator.py.
+7. The orchestrator builds the system prompt using agent/prompts.py.
+8. The orchestrator asks the model to decide the next action.
+9. If the model selects SQL, the orchestrator invokes tools/sql_engine.py.
+10. tools/sql_engine.py validates the query as read-only and executes it.
+11. The returned rows are fed into tools/insight_engine.py if the agent requests statistical analysis.
+12. If document context is needed, tools/rag_engine.py retrieves relevant chunks from the vector index.
+13. If a chart would help, tools/viz_engine.py renders an image and returns a static URL.
+14. If the user requested an alert or automation, tools/action_engine.py creates the alert rule.
+15. The orchestrator collects every observation and assembles a final answer.
+16. The orchestrator returns the answer text, execution trace, and any artifacts to controller/query_router.py.
+17. The query router saves a QueryLog record through utils/db.py and model/db_models.py.
+18. The router returns the final JSON payload to the frontend.
+19. The frontend displays the answer, chart, and trace, and the same record becomes available in the History page.
+20. If the query produced a persistent alert, the Notification Center can later show the associated rule and dispatch log.
+21. If the request changed system metrics, analytics routes can aggregate the new operational data.
+22. The same backend state also feeds the dashboard cards and system health indicators.
+
+Implementation priority order:
+- Build config.py, utils/db.py, and model/db_models.py first.
+- Add utils/auth.py and controller/auth_router.py next.
+- Add controller/project_router.py and controller/query_router.py after persistence exists.
+- Add agent/orchestrator.py and the tool modules once the API contracts are defined.
+- Add history, analytics, and notification routers after query logs and alert rules are writable.
+- Wire server.py last so the complete backend surface is mounted cleanly.
+
+Operational rule for this backend:
+- If the backend cannot explain where a value came from, it should not present that value as fact.
+- If a number is displayed, it should either come from SQL, a metric table, or a computation trace.
+- If a chart is shown, the response should identify the source data and render path.
+- If a rule is created, the record must be persisted and auditable.
+- If a history entry exists, it must correspond to an actual request lifecycle.
+- If a health badge is green, the health endpoint must be able to justify it.

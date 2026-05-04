@@ -5,38 +5,39 @@ import {
   BarChart3,
   Clock3,
   Sparkles,
-  LayoutDashboard,
   ChevronLeft,
   Database,
   Terminal,
   Activity,
   Cpu,
   Bell,
+  Box,
 } from 'lucide-react';
+import Navbar from '../../components/navbar';
 
 const projectCatalog = {
-  'q4-revenue-analysis': {
-    name: 'Q4 Revenue',
+  'prj-1024': {
+    name: 'Q4 Revenue Analysis',
     id: 'PRJ-1024',
-    status: 'Active',
+    status: 'ACTIVE',
+    color: 'bg-[#98465f]',
+  },
+  'prj-1187': {
+    name: 'Customer Feedback Engine',
+    id: 'PRJ-1187',
+    status: 'PROCESSING',
+    color: 'bg-blue-500',
+  },
+  'prj-1402': {
+    name: 'Inventory Audit 2026',
+    id: 'PRJ-1402',
+    status: 'COMPLETED',
     color: 'bg-emerald-500',
   },
-  'customer-feedback-engine': {
-    name: 'Feedback',
-    id: 'PRJ-1187',
-    status: 'Processing',
-    color: 'bg-violet-500',
-  },
-  'inventory-audit-2024': {
-    name: 'Audit 2024',
-    id: 'PRJ-1402',
-    status: 'Completed',
-    color: 'bg-sky-500',
-  },
-  'churn-prediction-model': {
-    name: 'Churn AI',
+  'prj-1520': {
+    name: 'Churn Prediction Model',
     id: 'PRJ-1520',
-    status: 'Idle',
+    status: 'IDLE',
     color: 'bg-slate-500',
   },
 };
@@ -50,47 +51,39 @@ const navItems = [
 
 const ProjectLayout = () => {
   const { projectId } = useParams();
-  const project = projectCatalog[projectId] || {
-    name: 'Workspace',
-    id: 'PRJ-000',
-    color: 'bg-cyan-500',
+  const safeId = projectId ? projectId.toLowerCase() : 'prj-1024';
+  const project = projectCatalog[safeId] || {
+    name: 'Unknown Workspace',
+    id: safeId.toUpperCase(),
+    color: 'bg-slate-700',
+    status: 'OFFLINE',
   };
 
   return (
-    <div className="flex h-screen bg-[#020617] text-slate-200 overflow-hidden font-sans">
-      {/* --- SLIM COMMAND DOCK (Joined Left) --- */}
-      <aside className="w-20 lg:w-64 flex flex-col bg-[#050912] border-r border-white/5 z-20">
-        {/* Project Selector / Back Button */}
-        <div className="p-4 border-b border-white/5">
-          <Link
-            to="/"
-            className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-white/5 transition-colors group"
-          >
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-900 border border-white/10 text-slate-400 group-hover:text-white group-hover:border-white/20 transition-all">
-              <ChevronLeft size={16} />
-            </div>
-            <span className="hidden lg:block text-xs font-bold uppercase tracking-widest text-slate-500 group-hover:text-slate-300">
-              Dashboard
-            </span>
-          </Link>
-        </div>
+    <div className="flex flex-col h-screen bg-app text-muted font-satoshi selection-accent">
+      {/* Top Navbar */}
+      <Navbar />
 
-        {/* Project Branding */}
-        <div className="p-6">
-          <div className="flex items-center gap-4">
-            <div
-              className={`h-3 w-3 rounded-full ${project.color} shadow-[0_0_10px_rgba(0,0,0,0.5)]`}
-            />
-            <div className="hidden lg:block">
-              <h2 className="text-sm font-black text-white truncate w-32 tracking-tight">
-                {project.name}
-              </h2>
-              <p className="text-[10px] font-mono text-slate-500 uppercase tracking-tighter">
-                ID: {project.id}
-              </p>
-            </div>
+      <div className="flex flex-1 overflow-hidden">
+        {/* --- COMMAND DOCK (Sidebar) --- */}
+        <aside className="w-20 lg:w-64 flex flex-col bg-app border-r border-white/5 z-20 shrink-0 relative">
+          {/* Subtle Grid Background for Sidebar */}
+          <div className="absolute inset-0 pointer-events-none opacity-[0.02] bg-[radial-gradient(white_1px,transparent_1px)] [background-size:20px_20px]" />
+
+          {/* Back Button */}
+          <div className="p-4 border-b border-white/5 relative z-10">
+            <Link
+              to="/dashboard"
+              className="flex items-center gap-3 px-3 py-2 hover:bg-white/5 transition-colors group rounded-none border border-transparent hover:border-white/10"
+            >
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center bg-black border border-white/10 text-slate-500 group-hover:text-white transition-colors">
+                <ChevronLeft size={14} strokeWidth={1.5} />
+              </div>
+              <span className="hidden lg:block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 group-hover:text-white transition-colors">
+                Console Return
+              </span>
+            </Link>
           </div>
-        </div>
 
         {/* Navigation Rail */}
         <nav className="flex-1 px-4 space-y-2">
@@ -123,10 +116,27 @@ const ProjectLayout = () => {
 
                     <span className="hidden lg:block">{item.label}</span>
 
-                    {isActive && (
-                      <motion.div
-                        layoutId="activePill"
-                        className="hidden lg:block ml-auto h-1.5 w-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]"
+            {navItems.map((item) => {
+              const Icon = item.icon;
+
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className={({ isActive }) =>
+                    `flex items-center gap-4 px-3 py-3 rounded-none text-[10px] uppercase font-bold tracking-[0.2em] transition-all group border-l-2 ${
+                      isActive
+                        ? 'bg-white/5 text-white border-[#98465f]'
+                        : 'text-muted hover:text-ui hover:bg-white/5 border-transparent'
+                    }`
+                  }
+                >
+                  {({ isActive }) => (
+                    <>
+                      <Icon
+                        size={16}
+                        strokeWidth={isActive ? 2 : 1.5}
+                        className={isActive ? 'text-[#98465f]' : 'text-muted'}
                       />
                     )}
                   </>
@@ -152,44 +162,45 @@ const ProjectLayout = () => {
               </p>
             </div>
           </div>
-        </div>
-      </aside>
+        </aside>
 
-      {/* --- MAIN STAGE --- */}
-      <main className="flex-1 flex flex-col relative bg-[#020617] overflow-y-auto">
-        {/* Subtle Backdrop Accent */}
-        <div className="absolute top-0 left-0 w-full h-[300px] bg-gradient-to-b from-cyan-500/5 to-transparent pointer-events-none" />
-
-        {/* Top Control Bar (Professional High-Density) */}
-        <header className="h-14 shrink-0 flex items-center justify-between px-8 border-b border-white/5 bg-[#020617]/50 backdrop-blur-md sticky top-0 z-10">
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-lg">
-              <Database size={14} className="text-indigo-400" />
-              <span className="text-[10px] font-mono font-bold text-slate-300">
-                SQL_MASTER_DB
-              </span>
+        {/* --- MAIN STAGE --- */}
+        <main className="flex-1 flex flex-col relative bg-app overflow-y-auto">
+          {/* Top Control Bar (HUD High-Density) */}
+          <header className="h-14 shrink-0 flex items-center justify-between px-8 border-b border-white/5 bg-[#0a0a0c] sticky top-0 z-10">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 px-3 py-1 border border-white/10 bg-black/50">
+                <Database
+                  size={12}
+                  strokeWidth={1.5}
+                  className="text-[#98465f]"
+                />
+                <span className="text-[9px] font-mono font-bold tracking-widest text-slate-400">
+                  SRC_SQL_01
+                </span>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-1 border border-white/10 bg-black/50">
+                <Box size={12} strokeWidth={1.5} className="text-[#98465f]" />
+                <span className="text-[9px] font-mono font-bold tracking-widest text-slate-400">
+                  RAG_IDX_A
+                </span>
+              </div>
             </div>
-            <div className="flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-lg">
-              <Cpu size={14} className="text-cyan-400" />
-              <span className="text-[10px] font-mono font-bold text-slate-300">
-                ADIA_v3.2_OAI
-              </span>
+
+            <div className="flex items-center gap-4">
+              <button className="flex items-center gap-2 px-4 py-1.5 bg-[#98465f] hover:bg-[#b35c75] text-black text-[9px] font-bold tracking-[0.2em] uppercase transition-colors rounded-none">
+                <Terminal size={12} strokeWidth={2} />
+                Refresh Node
+              </button>
             </div>
-          </div>
+          </header>
 
-          <div className="flex items-center gap-4">
-            <button className="flex items-center gap-2 px-4 py-1.5 bg-cyan-500 text-black text-xs font-black rounded-lg hover:bg-cyan-400 transition-colors shadow-lg shadow-cyan-500/20">
-              <Terminal size={14} />
-              SYNC ASSETS
-            </button>
+          {/* Sub-Page Content */}
+          <div className="flex-1 relative">
+            <Outlet />
           </div>
-        </header>
-
-        {/* Sub-Page Content */}
-        <div className="flex-1 relative">
-          <Outlet />
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 };
