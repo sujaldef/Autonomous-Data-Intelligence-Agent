@@ -112,124 +112,137 @@ const Architecture = () => {
       </div>
 
       {/* --- FULL SCREEN HERO --- */}
-{/* --- UPDATED STRUCTURAL BACKGROUND --- */}
-<div className="fixed inset-0 z-0 pointer-events-none bg-[#050507]">
-  {/* Perspective Grid (Isometric Floor) */}
-  <div 
-    className="absolute inset-0 opacity-[0.05]" 
-    style={{ 
-      backgroundImage: `linear-gradient(#98465f 1px, transparent 1px), linear-gradient(90deg, #98465f 1px, transparent 1px)`,
-      backgroundSize: '100px 100px',
-      transform: 'perspective(1000px) rotateX(60deg) translateY(-100px)',
-      maskImage: 'radial-gradient(ellipse at center, black, transparent 80%)'
-    }} 
-  />
-  
-  {/* Layered Accent Glows */}
-  <div className="absolute top-1/4 -left-20 w-[500px] h-[500px] bg-[#98465f]/5 blur-[120px] rounded-full" />
-  <div className="absolute bottom-0 right-0 w-[600px] h-[400px] bg-white/[0.02] blur-[100px] rounded-full" />
-</div>
+      {/* --- UPDATED STRUCTURAL BACKGROUND --- */}
+      <div className="fixed inset-0 z-0 pointer-events-none bg-[#050507]">
+        {/* Perspective Grid (Isometric Floor) */}
+        <div
+          className="absolute inset-0 opacity-[0.05]"
+          style={{
+            backgroundImage: `linear-gradient(#98465f 1px, transparent 1px), linear-gradient(90deg, #98465f 1px, transparent 1px)`,
+            backgroundSize: '100px 100px',
+            transform: 'perspective(1000px) rotateX(60deg) translateY(-100px)',
+            maskImage:
+              'radial-gradient(ellipse at center, black, transparent 80%)',
+          }}
+        />
 
-<header className="relative z-10 min-h-screen flex flex-col justify-center px-6 md:px-20 max-w-7xl mx-auto overflow-hidden">
-  <div className="grid lg:grid-cols-2 gap-12 items-center">
-    
-    {/* TEXT CONTENT */}
-    <motion.div
-      initial={{ opacity: 0, x: -30 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.8 }}
-    >
-      <div className="flex items-center gap-3 mb-8">
-        <div className="w-2 h-2 rotate-45 border border-[#98465f]" />
-        <span className="text-[10px] tracking-[0.5em] uppercase text-[#98465f] font-bold">
-          System Topology
-        </span>
+        {/* Layered Accent Glows */}
+        <div className="absolute top-1/4 -left-20 w-[500px] h-[500px] bg-[#98465f]/5 blur-[120px] rounded-full" />
+        <div className="absolute bottom-0 right-0 w-[600px] h-[400px] bg-white/[0.02] blur-[100px] rounded-full" />
       </div>
 
-      <h1 className="text-6xl md:text-8xl font-light tracking-tighter leading-[0.85] text-white mb-8">
-        Five Layers <br />
-        <span className="font-serif italic text-white/30" style={{ fontFamily: "'Playfair Display', serif" }}>
-          Of Logic.
-        </span>
-      </h1>
+      <header className="relative z-10 min-h-screen flex flex-col justify-center px-6 md:px-20 max-w-7xl mx-auto overflow-hidden">
+        <div className="grid lg:grid-cols-2 gap-12 items-center">
+          {/* TEXT CONTENT */}
+          <motion.div
+            initial={{ opacity: 0, x: -30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8 }}
+          >
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-2 h-2 rotate-45 border border-[#98465f]" />
+              <span className="text-[10px] tracking-[0.5em] uppercase text-[#98465f] font-bold">
+                System Topology
+              </span>
+            </div>
 
-      <p className="text-white/40 text-sm md:text-base font-light leading-relaxed max-w-md border-l border-white/10 pl-6 mb-12">
-        ADIA physically separates reasoning from execution. The LLM acts as
-        the brain, while independent, sandboxed tool layers handle the compute 
-        to ensure zero-hallucination outputs.
-      </p>
+            <h1 className="text-6xl md:text-8xl font-light tracking-tighter leading-[0.85] text-white mb-8">
+              Five Layers <br />
+              <span
+                className="font-serif italic text-white/30"
+                style={{ fontFamily: "'Playfair Display', serif" }}
+              >
+                Of Logic.
+              </span>
+            </h1>
 
-      {/* Connectivity Meta */}
-      <div className="flex items-center gap-6">
-        <div className="flex flex-col">
-          <span className="text-[8px] uppercase tracking-widest text-white/20 mb-1 font-bold">Latency</span>
-          <span className="text-xs font-mono text-white/60">~140ms / hop</span>
-        </div>
-        <div className="h-6 w-px bg-white/10" />
-        <div className="flex flex-col">
-          <span className="text-[8px] uppercase tracking-widest text-white/20 mb-1 font-bold">Engine</span>
-          <span className="text-xs font-mono text-white/60">V-Series Agent</span>
-        </div>
-      </div>
-    </motion.div>
+            <p className="text-white/40 text-sm md:text-base font-light leading-relaxed max-w-md border-l border-white/10 pl-6 mb-12">
+              ADIA physically separates reasoning from execution. The LLM acts
+              as the brain, while independent, sandboxed tool layers handle the
+              compute to ensure zero-hallucination outputs.
+            </p>
 
-    {/* ISOMETRIC LAYER VISUALIZATION */}
-    <div className="hidden lg:flex justify-center items-center relative h-[600px]">
-      {[...Array(5)].map((_, i) => (
-        <motion.div
-          key={i}
-          initial={{ opacity: 0, y: 50 * i }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ 
-            delay: i * 0.15, 
-            duration: 1, 
-            ease: [0.16, 1, 0.3, 1] 
-          }}
-          style={{ 
-            zIndex: 5 - i,
-            top: `${25 + (i * 10)}%`,
-            width: `${300 - (i * 20)}px`,
-            height: '160px',
-            rotateX: '55deg',
-            rotateZ: '-35deg',
-          }}
-          className="absolute border border-white/10 bg-white/[0.02] backdrop-blur-md flex items-center justify-center group"
-        >
-          {/* Subtle Glow on the 'Active' Layer (Agent Layer) */}
-          {i === 1 && (
-            <div className="absolute inset-0 bg-[#98465f]/10 shadow-[0_0_50px_rgba(152,70,95,0.2)]" />
-          )}
-          
-          <div className="text-[8px] uppercase tracking-[0.4em] text-white/20 font-bold -rotate-12 translate-y-4 translate-x-4">
-            LEVEL_0{5 - i}
+            {/* Connectivity Meta */}
+            <div className="flex items-center gap-6">
+              <div className="flex flex-col">
+                <span className="text-[8px] uppercase tracking-widest text-white/20 mb-1 font-bold">
+                  Latency
+                </span>
+                <span className="text-xs font-mono text-white/60">
+                  ~140ms / hop
+                </span>
+              </div>
+              <div className="h-6 w-px bg-white/10" />
+              <div className="flex flex-col">
+                <span className="text-[8px] uppercase tracking-widest text-white/20 mb-1 font-bold">
+                  Engine
+                </span>
+                <span className="text-xs font-mono text-white/60">
+                  V-Series Agent
+                </span>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* ISOMETRIC LAYER VISUALIZATION */}
+          <div className="hidden lg:flex justify-center items-center relative h-[600px]">
+            {[...Array(5)].map((_, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 50 * i }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  delay: i * 0.15,
+                  duration: 1,
+                  ease: [0.16, 1, 0.3, 1],
+                }}
+                style={{
+                  zIndex: 5 - i,
+                  top: `${25 + i * 10}%`,
+                  width: `${300 - i * 20}px`,
+                  height: '160px',
+                  rotateX: '55deg',
+                  rotateZ: '-35deg',
+                }}
+                className="absolute border border-white/10 bg-white/[0.02] backdrop-blur-md flex items-center justify-center group"
+              >
+                {/* Subtle Glow on the 'Active' Layer (Agent Layer) */}
+                {i === 1 && (
+                  <div className="absolute inset-0 bg-[#98465f]/10 shadow-[0_0_50px_rgba(152,70,95,0.2)]" />
+                )}
+
+                <div className="text-[8px] uppercase tracking-[0.4em] text-white/20 font-bold -rotate-12 translate-y-4 translate-x-4">
+                  LEVEL_0{5 - i}
+                </div>
+
+                {/* Decorative Corner Accents */}
+                <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-white/20" />
+                <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-white/20" />
+              </motion.div>
+            ))}
+
+            {/* Vertical 'Data Connector' Line */}
+            <motion.div
+              initial={{ height: 0 }}
+              animate={{ height: '50%' }}
+              transition={{ delay: 0.8, duration: 1.5 }}
+              className="absolute w-px bg-gradient-to-b from-transparent via-[#98465f] to-transparent z-10"
+            />
           </div>
-          
-          {/* Decorative Corner Accents */}
-          <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-white/20" />
-          <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-white/20" />
-        </motion.div>
-      ))}
+        </div>
 
-      {/* Vertical 'Data Connector' Line */}
-      <motion.div 
-        initial={{ height: 0 }}
-        animate={{ height: '50%' }}
-        transition={{ delay: 0.8, duration: 1.5 }}
-        className="absolute w-px bg-gradient-to-b from-transparent via-[#98465f] to-transparent z-10"
-      />
-    </div>
-  </div>
-
-  {/* SCROLL CUE */}
-  <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4">
-    <span className="text-[9px] uppercase tracking-[0.5em] text-white/20 font-bold">Inspect Node Architecture</span>
-    <motion.div 
-      animate={{ height: [40, 80, 40] }}
-      transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
-      className="w-px bg-gradient-to-b from-white/40 to-transparent" 
-    />
-  </div>
-</header>
+        {/* SCROLL CUE */}
+        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4">
+          <span className="text-[9px] uppercase tracking-[0.5em] text-white/20 font-bold">
+            Inspect Node Architecture
+          </span>
+          <motion.div
+            animate={{ height: [40, 80, 40] }}
+            transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
+            className="w-px bg-gradient-to-b from-white/40 to-transparent"
+          />
+        </div>
+      </header>
 
       {/* --- ARCHITECTURE STACK --- */}
       <section className="relative z-10 py-20 px-6 md:px-20 max-w-5xl mx-auto">

@@ -4,15 +4,15 @@
   color-scheme: dark;
 
   /* BASE */
-  --bg: #050507;
-  --bg-elevated: #0a0a0c;
-  --bg-panel: rgba(20, 20, 24, 0.75);
-  --bg-panel-strong: rgba(10, 10, 12, 0.95);
+  --bg: #0d0d12;
+  --bg-elevated: #16161b;
+  --bg-panel: rgba(28, 28, 36, 0.75);
+  --bg-panel-strong: rgba(18, 18, 22, 0.95);
 
   /* TEXT */
-  --text: #e8e6e3;
+  --text: #f4f4f5;
   --text-strong: #ffffff;
-  --muted: #a1a1aa;
+  --muted: #d4d4d8;
 
   /* ACCENT */
   --accent: #98465f;
@@ -37,8 +37,8 @@
 
 /* RGB helpers for opacity utilities */
 :root {
-  --bg-rgb: 5, 5, 7; /* #050507 */
-  --bg-strong-rgb: 10, 10, 12; /* #0a0a0c */
+  --bg-rgb: 13, 13, 18; /* #0d0d12 */
+  --bg-strong-rgb: 22, 22, 27; /* #16161b */
   --accent-rgb: 152, 70, 95; /* #98465f */
 }
 
@@ -96,7 +96,7 @@
 }
 
 html {
-  background: #000000;
+  background: var(--bg);
 }
 
 body {
@@ -111,8 +111,8 @@ body {
 }
 
 ::selection {
-  background: rgba(152, 70, 95, 0.28);
-  color: #f8fafc;
+  background: rgba(var(--accent-rgb), 0.28);
+  color: var(--text-strong);
 }
 
 a {
@@ -125,11 +125,28 @@ input,
 textarea {
   font: inherit;
 }
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
 /* Add this to your Global CSS */
 .hero-mesh {
-  background-color: #050507;
+  background-color: var(--bg);
   background-image:
-    radial-gradient(at 0% 0%, rgba(152, 70, 95, 0.15) 0, transparent 50%),
+    radial-gradient(at 0% 0%, var(--accent-soft) 0, transparent 50%),
     radial-gradient(at 50% 0%, rgba(6, 182, 212, 0.05) 0, transparent 50%);
   position: relative;
 }
@@ -139,10 +156,7 @@ textarea {
   position: absolute;
   inset: 0;
   /* This creates a high-end "dotted" grid look */
-  background-image: radial-gradient(
-    rgba(255, 255, 255, 0.05) 1px,
-    transparent 1px
-  );
+  background-image: radial-gradient(var(--border) 1px, transparent 1px);
   background-size: 40px 40px;
   mask-image: radial-gradient(ellipse at center, black, transparent 80%);
 }

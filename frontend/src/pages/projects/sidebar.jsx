@@ -159,7 +159,7 @@ const ProjectLayout = () => {
         </aside>
 
         {/* --- MAIN STAGE --- */}
-        <main className="flex-1 flex flex-col relative bg-app overflow-y-auto">
+        <main id="main-scroll-container" className="flex-1 flex flex-col relative bg-app overflow-y-auto">
           {/* Top Control Bar (HUD High-Density) */}
           <header className="h-14 shrink-0 flex items-center justify-between px-8 border-b border-white/5 bg-[#0a0a0c] sticky top-0 z-10">
             <div className="flex items-center gap-4">
