@@ -85,27 +85,10 @@ const ProjectLayout = () => {
             </Link>
           </div>
 
-          {/* Project Branding */}
-          <div className="p-6 border-b border-white/5 relative z-10 bg-app-strong">
-            <div className="flex items-center gap-4">
-              <div
-                className={`h-2 w-2 ${project.color} shadow-[0_0_8px_currentColor] opacity-80`}
-              />
-              <div className="hidden lg:block">
-                <p className="text-[9px] font-mono text-muted uppercase tracking-widest mb-1">
-                  ID: {project.id}
-                </p>
-                <h2 className="text-xs font-bold text-strong uppercase tracking-widest leading-tight">
-                  {project.name}
-                </h2>
-              </div>
-            </div>
-          </div>
-
           {/* Navigation Rail */}
-          <nav className="flex-1 px-4 py-6 space-y-1 relative z-10">
-            <div className="hidden lg:block px-3 mb-6">
-              <span className="text-[9px] font-bold uppercase tracking-[0.3em] text-muted">
+          <nav className="flex-1 px-4 space-y-2 py-6">
+            <div className="hidden lg:block px-3 mb-4">
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-600">
                 Operations
               </span>
             </div>
@@ -118,20 +101,17 @@ const ProjectLayout = () => {
                   key={item.to}
                   to={item.to}
                   className={({ isActive }) =>
-                    `flex items-center gap-4 px-3 py-3 rounded-none text-[10px] uppercase font-bold tracking-[0.2em] transition-all group border-l-2 ${
+                    [
+                      'flex items-center gap-4 px-3 py-3 rounded-xl text-sm font-bold transition-all group border',
                       isActive
-                        ? 'bg-white/5 text-white border-[#98465f]'
-                        : 'text-muted hover:text-ui hover:bg-white/5 border-transparent'
-                    }`
+                        ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20 shadow-[0_0_20px_rgba(6,182,212,0.1)]'
+                        : 'text-slate-500 hover:text-slate-200 hover:bg-white/5 border-transparent',
+                    ].join(' ')
                   }
                 >
                   {({ isActive }) => (
                     <>
-                      <Icon
-                        size={16}
-                        strokeWidth={isActive ? 2 : 1.5}
-                        className={isActive ? 'text-[#98465f]' : 'text-muted'}
-                      />
+                      <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
                       <span className="hidden lg:block">{item.label}</span>
                     </>
                   )}
@@ -140,18 +120,18 @@ const ProjectLayout = () => {
             })}
           </nav>
 
-          {/* System Health Footer */}
-          <div className="p-6 mt-auto border-t border-white/5 bg-app-strong relative z-10">
+          {/* System Health (Footer of Sidebar) */}
+          <div className="p-6 mt-auto border-t border-white/5 bg-slate-950/30">
             <div className="flex items-center gap-4">
-              <div className="h-8 w-8 shrink-0 pill-bg border border-white/5 flex items-center justify-center text-emerald-500">
-                <Activity size={14} strokeWidth={1.5} />
+              <div className="h-10 w-10 shrink-0 rounded-xl bg-slate-900 border border-white/10 flex items-center justify-center text-emerald-500">
+                <Activity size={18} />
               </div>
               <div className="hidden lg:block">
-                <p className="text-[9px] font-bold text-slate-600 uppercase tracking-widest mb-0.5">
-                  SYS_STATUS
+                <p className="text-[10px] font-black text-slate-500 uppercase">
+                  Agent Status
                 </p>
-                <p className="text-[10px] font-mono text-emerald-500 tracking-wider">
-                  SYNCED
+                <p className="text-xs font-bold text-white">
+                  Live & Synchronized
                 </p>
               </div>
             </div>
@@ -159,7 +139,10 @@ const ProjectLayout = () => {
         </aside>
 
         {/* --- MAIN STAGE --- */}
-        <main id="main-scroll-container" className="flex-1 flex flex-col relative bg-app overflow-y-auto">
+        <main
+          id="main-scroll-container"
+          className="flex-1 flex flex-col relative bg-app overflow-y-auto"
+        >
           {/* Top Control Bar (HUD High-Density) */}
           <header className="h-14 shrink-0 flex items-center justify-between px-8 border-b border-white/5 bg-[#0a0a0c] sticky top-0 z-10">
             <div className="flex items-center gap-4">
