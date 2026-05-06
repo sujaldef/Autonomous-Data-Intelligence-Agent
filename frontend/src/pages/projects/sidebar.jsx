@@ -85,36 +85,13 @@ const ProjectLayout = () => {
             </Link>
           </div>
 
-        {/* Navigation Rail */}
-        <nav className="flex-1 px-4 space-y-2">
-          <div className="hidden lg:block px-3 mb-4">
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-600">
-              Operations are here [later we can remove it ]
-            </span>
-          </div>
-
-
-          {navItems.map((item) => {
-            const Icon = item.icon;
-
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  [
-                    'flex items-center gap-4 px-3 py-3 rounded-xl text-sm font-bold transition-all group',
-                    isActive
-                      ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-[0_0_20px_rgba(6,182,212,0.1)]'
-                      : 'text-slate-500 hover:text-slate-200 hover:bg-white/5 border border-transparent',
-                  ].join(' ')
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
-
-                    <span className="hidden lg:block">{item.label}</span>
+          {/* Navigation Rail */}
+          <nav className="flex-1 px-4 space-y-2 py-6">
+            <div className="hidden lg:block px-3 mb-4">
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-600">
+                Operations
+              </span>
+            </div>
 
             {navItems.map((item) => {
               const Icon = item.icon;
@@ -124,48 +101,48 @@ const ProjectLayout = () => {
                   key={item.to}
                   to={item.to}
                   className={({ isActive }) =>
-                    `flex items-center gap-4 px-3 py-3 rounded-none text-[10px] uppercase font-bold tracking-[0.2em] transition-all group border-l-2 ${
+                    [
+                      'flex items-center gap-4 px-3 py-3 rounded-xl text-sm font-bold transition-all group border',
                       isActive
-                        ? 'bg-white/5 text-white border-[#98465f]'
-                        : 'text-muted hover:text-ui hover:bg-white/5 border-transparent'
-                    }`
+                        ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20 shadow-[0_0_20px_rgba(6,182,212,0.1)]'
+                        : 'text-slate-500 hover:text-slate-200 hover:bg-white/5 border-transparent',
+                    ].join(' ')
                   }
                 >
                   {({ isActive }) => (
                     <>
-                      <Icon
-                        size={16}
-                        strokeWidth={isActive ? 2 : 1.5}
-                        className={isActive ? 'text-[#98465f]' : 'text-muted'}
-                      />
-                    )}
-                  </>
-                )}
-              </NavLink>
-            );
-          })}
-        </nav>
+                      <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+                      <span className="hidden lg:block">{item.label}</span>
+                    </>
+                  )}
+                </NavLink>
+              );
+            })}
+          </nav>
 
-
-        {/* System Health (Footer of Sidebar) */}
-        <div className="p-6 mt-auto border-t border-white/5 bg-slate-950/30">
-          <div className="flex items-center gap-4">
-            <div className="h-10 w-10 shrink-0 rounded-xl bg-slate-900 border border-white/10 flex items-center justify-center text-emerald-500">
-              <Activity size={18} />
-            </div>
-            <div className="hidden lg:block">
-              <p className="text-[10px] font-black text-slate-500 uppercase">
-                Agent Status
-              </p>
-              <p className="text-xs font-bold text-white">
-                Live & Synchronized
-              </p>
+          {/* System Health (Footer of Sidebar) */}
+          <div className="p-6 mt-auto border-t border-white/5 bg-slate-950/30">
+            <div className="flex items-center gap-4">
+              <div className="h-10 w-10 shrink-0 rounded-xl bg-slate-900 border border-white/10 flex items-center justify-center text-emerald-500">
+                <Activity size={18} />
+              </div>
+              <div className="hidden lg:block">
+                <p className="text-[10px] font-black text-slate-500 uppercase">
+                  Agent Status
+                </p>
+                <p className="text-xs font-bold text-white">
+                  Live & Synchronized
+                </p>
+              </div>
             </div>
           </div>
         </aside>
 
         {/* --- MAIN STAGE --- */}
-        <main className="flex-1 flex flex-col relative bg-app overflow-y-auto">
+        <main
+          id="main-scroll-container"
+          className="flex-1 flex flex-col relative bg-app overflow-y-auto"
+        >
           {/* Top Control Bar (HUD High-Density) */}
           <header className="h-14 shrink-0 flex items-center justify-between px-8 border-b border-white/5 bg-[#0a0a0c] sticky top-0 z-10">
             <div className="flex items-center gap-4">

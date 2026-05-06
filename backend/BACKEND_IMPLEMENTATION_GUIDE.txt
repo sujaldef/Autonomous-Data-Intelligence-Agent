@@ -61,6 +61,238 @@ Required feature coverage from the frontend:
 The rest of this file is structured file-by-file.
 
 
+## Canonical Backend Structure
+
+Use this as the implementation target for the backend going forward. This layout is the one the AI should follow when generating code.
+
+```text
+backend/
+│
+├── main.py
+├── config.py
+│
+├── controller/
+│   ├── auth.py
+│   ├── query.py
+│   ├── history.py
+│   ├── analytics.py
+│   └── notification.py
+│
+├── engine/
+│   ├── orchestrator.py
+│   ├── sql_engine.py
+│   ├── insight_engine.py
+│   ├── rag_engine.py
+│   ├── action_engine.py
+│   └── scheduler.py
+│
+├── model/
+│   ├── db_models.py
+│   ├── schemas.py
+│   └── llm.py
+│
+├── utils/
+│   ├── db.py
+│   ├── auth.py
+│   └── logger.py
+│
+├── stats/
+│   └── analytics_service.py
+│
+└── static/
+    └── charts/
+```
+
+Implementation rule:
+- main.py is the app entrypoint and should only wire routers, middleware, and startup/shutdown hooks.
+- config.py must hold all environment-driven settings.
+- controller/*.py files are API handlers only.
+- engine/*.py files contain reasoning, retrieval, analysis, and background execution.
+- model/*.py files contain database models, request/response schemas, and LLM setup.
+- utils/*.py files contain shared infrastructure code.
+- stats/analytics_service.py contains analytics aggregation logic used by the analytics controller.
+- static/charts/ stores generated chart files returned by query and analytics flows.
+
+If a later implementation needs different internal names, keep this structure as the public contract and map legacy names into it.
+
+
+## File-by-File Implementation Brief
+
+This is the short, implementation-ready version of the backend. It is written so another AI can generate the full backend without guessing.
+
+### `main.py`
+- Create the FastAPI app.
+- Register CORS.
+- Include all routers under a stable `/api` prefix.
+- Initialize logging, DB, and scheduler startup hooks.
+- Expose `/api/system/health` and `/api/system/readiness`.
+
+### `config.py`
+- Define a single settings object.
+- Read `DATABASE_URL`, `JWT_SECRET`, `JWT_ALGORITHM`, `ACCESS_TOKEN_EXPIRE_MINUTES`, `CORS_ORIGINS`, `APP_NAME`, `APP_VERSION`, `CHART_DIR`.
+- Provide safe defaults for local development.
+- Fail fast when required production settings are missing.
+
+### `controller/auth.py`
+- Implement signup, login, and current-user endpoints.
+- Use `utils/auth.py` for password hashing and JWT issuance.
+- Enforce unique email addresses.
+- Return token and user metadata.
+
+### `controller/query.py`
+- Accept natural-language questions.
+- Load memory and project context.
+- Call `engine/orchestrator.py`.
+- Persist query logs.
+- Return answer, trace, chart URL, and confidence metadata.
+
+### `controller/history.py`
+- Return paginated query history.
+- Support lookup by history item id.
+- Support search and filters.
+
+### `controller/analytics.py`
+- Return telemetry, trends, and KPI cards.
+- Call `stats/analytics_service.py` for aggregation.
+
+### `controller/notification.py`
+- Manage alert rules and notification logs.
+- Implement CRUD for alert rules.
+- Expose logs for dispatched alerts.
+- Keep rule creation separate from rule evaluation.
+
+### `engine/orchestrator.py`
+- Decide which tool to use.
+- Call SQL, RAG, insight, action, and chart tools.
+- Never fabricate values.
+- Return structured evidence and final answer text.
+
+### `engine/sql_engine.py`
+- Execute read-only SQL only.
+- Reject writes and unsafe statements.
+- Return rows plus column metadata.
+
+### `engine/insight_engine.py`
+- Compute growth, deltas, anomalies, and summaries from structured data.
+
+### `engine/rag_engine.py`
+- Retrieve relevant document chunks from vector storage.
+
+### `engine/action_engine.py`
+- Create alert rule records from user intent.
+- Do not send notifications directly unless called by the scheduler.
+
+### `engine/scheduler.py`
+- Run on a timed loop or background worker.
+- Fetch active alert rules.
+- Evaluate metrics.
+- Create `NotificationLog` rows when conditions match.
+- Trigger optional delivery.
+
+### `model/db_models.py`
+- Define `User`, `Project`, `QueryLog`, `AlertRule`, `NotificationLog`, `SystemMetric`, and `ConversationSession`.
+- Keep timestamps and indexes consistent.
+
+### `model/schemas.py`
+- Define request and response schemas for auth, query, history, analytics, and notifications.
+
+### `model/llm.py`
+- Create and configure the LLM client used by the orchestrator.
+
+### `utils/db.py`
+- Create the SQLAlchemy engine and session factory.
+- Provide `get_db()` and `init_db()` helpers.
+
+### `utils/auth.py`
+- Hash passwords, verify passwords, create tokens, and decode tokens.
+
+### `utils/logger.py`
+- Configure structured logging and request correlation IDs.
+
+### `stats/analytics_service.py`
+- Aggregate query logs and metrics into dashboard-ready telemetry.
+
+### `static/charts/`
+- Store generated chart images that the API can return to the frontend.
+
+
+## Required Notification Design
+
+The notification system must follow this exact model.
+
+### Core Components
+1. `AlertRule` is the rule a user creates.
+2. `NotificationLog` stores the outcome of a triggered rule.
+3. `notification.py` is the API router for rules and logs.
+4. `scheduler.py` is the background evaluator that makes alerts actually work.
+
+### AlertRule table
+Use these fields at minimum:
+```json
+{
+  "id": 1,
+  "user_id": 101,
+  "metric": "monthly_revenue",
+  "operator": "<",
+  "threshold": 50000,
+  "notification_type": "email",
+  "quiet_hours_start": "22:00",
+  "quiet_hours_end": "07:00",
+  "is_active": true,
+  "created_at": "..."
+}
+```
+
+### NotificationLog table
+Use these fields at minimum:
+```json
+{
+  "id": 901,
+  "rule_id": 1,
+  "triggered_value": 42000,
+  "status": "delivered",
+  "channel": "email",
+  "created_at": "..."
+}
+```
+
+### Notification API endpoints
+- `POST /api/notifications/rules` creates a rule.
+- `GET /api/notifications/rules` lists rules.
+- `PATCH /api/notifications/rules/{id}` updates a rule.
+- `DELETE /api/notifications/rules/{id}` disables a rule.
+- `GET /api/notifications/logs` returns delivery logs.
+
+### Scheduler flow
+1. User creates an alert rule.
+2. The rule is stored in the database.
+3. The scheduler runs every X minutes.
+4. Active rules are fetched.
+5. Each rule is evaluated against live SQL or metric data.
+6. If the condition is true, create a `NotificationLog` row.
+7. Send the notification if delivery is enabled.
+
+### Notification rules
+- Quiet hours must be honored.
+- Duplicate sends must be prevented.
+- Delivery failures must still be logged.
+- Rules must remain user-scoped.
+
+
+## Implementation Priority
+
+Build in this order:
+1. `config.py`, `utils/db.py`, and `model/db_models.py`
+2. `utils/auth.py` and `controller/auth.py`
+3. `controller/query.py` and `engine/orchestrator.py`
+4. `engine/sql_engine.py`, `engine/insight_engine.py`, `engine/rag_engine.py`, and `engine/action_engine.py`
+5. `controller/history.py` and `controller/analytics.py`
+6. `controller/notification.py` and `engine/scheduler.py`
+7. `main.py` last, after the modules above exist
+
+The AI should treat this document as the source of truth for the backend implementation.
+
+
 ## File: server.py
 
 ### 1. Purpose
@@ -791,6 +1023,9 @@ This file should be imported by utils/db.py during table initialization.
 It should not contain API route logic.
 It should not contain business logic beyond relationships and maybe simple helper properties.
 The tables should include users, projects, query_logs, alert_rules, notification_logs, system_metrics, and possibly conversation_sessions.
+For notifications, AlertRule and NotificationLog are mandatory, not optional.
+AlertRule must include at least: id, user_id, metric, operator, threshold, notification_type, quiet_hours_start, quiet_hours_end, is_active, created_at.
+NotificationLog must include at least: id, rule_id, triggered_value, status, channel, created_at.
 Each model should include created_at and updated_at fields where appropriate.
 Indexes should support common filtering patterns like user_id, project_id, session_id, and timestamp.
 Relationships should be explicit so joins are easy and reliable.
@@ -860,6 +1095,28 @@ The file should be stable, explicit, and migration-friendly.
     "session_id": "session-001",
     "query": "Show monthly revenue growth for 2024",
     "status": "complete"
+  }
+- Example alert rule row fields:
+  {
+    "id": 1,
+    "user_id": 101,
+    "metric": "monthly_revenue",
+    "operator": "<",
+    "threshold": 50000,
+    "notification_type": "email",
+    "quiet_hours_start": "22:00",
+    "quiet_hours_end": "07:00",
+    "is_active": true,
+    "created_at": "..."
+  }
+- Example notification log row fields:
+  {
+    "id": 901,
+    "rule_id": 1,
+    "triggered_value": 42000,
+    "status": "delivered",
+    "channel": "email",
+    "created_at": "..."
   }
 
 ### 8. Edge Cases & Failure Handling
@@ -1389,6 +1646,12 @@ It must be clear, consistent, and auditable.
 - Return dispatch logs.
 - Optionally trigger immediate test dispatches.
 - Support paging and filtering.
+- Expose the mandatory endpoint set for rule CRUD and logs:
+  POST /api/notifications/rules
+  GET /api/notifications/rules
+  PATCH /api/notifications/rules/{id}
+  DELETE /api/notifications/rules/{id}
+  GET /api/notifications/logs
 
 ### 3. Internal Components
 - APIRouter instance.
@@ -1396,6 +1659,8 @@ It must be clear, consistent, and auditable.
 - Dispatch log list handler.
 - Rule evaluation helper.
 - Optional background job enqueue helper.
+- Contract-level request validation for metric/operator/threshold.
+- Quiet-hours suppression checks for user-configured windows.
 
 ### 4. Data Flow
 - User submits an alert threshold.
@@ -1404,6 +1669,16 @@ It must be clear, consistent, and auditable.
 - A dispatch record is written.
 - The frontend fetches rules and logs from the router.
 
+Required notification execution flow:
+- User creates rule.
+- Rule is stored in DB as AlertRule.
+- Scheduler runs every X minutes.
+- Evaluator fetches active rules where is_active=true.
+- Evaluator checks live metric values from SQL or metric tables.
+- Evaluator applies operator and threshold.
+- If condition is true, create NotificationLog.
+- Send notification by channel if dispatch is enabled.
+
 ### 5. Function-Level Breakdown
 - create_rule(payload, user, db): store a new alert rule.
 - list_rules(user, db): return active rules.
@@ -1411,6 +1686,8 @@ It must be clear, consistent, and auditable.
 - delete_rule(rule_id, user, db): disable or remove a rule.
 - list_logs(user, db): return recent dispatch events.
 - trigger_test(rule_id, user, db): simulate dispatch if supported.
+- validate_rule_payload(payload): enforce metric/operator/threshold and quiet hours format.
+- apply_quiet_hours(rule, current_time): suppress non-critical sends during quiet window.
 
 ### 6. Integration with Other Files
 - Uses model/db_models.py for AlertRule and NotificationLog.
@@ -1418,6 +1695,7 @@ It must be clear, consistent, and auditable.
 - Uses utils/db.py for database sessions.
 - May use utils/auth.py for user scoping.
 - May be called by tools/action_engine.py or background evaluators.
+- Must integrate with a scheduler/evaluator module that runs independent of user requests.
 
 ### 7. Example Request/Response
 - Example rule request:
@@ -1425,12 +1703,15 @@ It must be clear, consistent, and auditable.
     "metric": "monthly_revenue",
     "operator": "<",
     "threshold": 50000,
-    "action": "email"
+    "notification_type": "email",
+    "quiet_hours_start": "22:00",
+    "quiet_hours_end": "07:00",
+    "is_active": true
   }
 - Example logs response:
   {
     "logs": [
-      {"id": "LOG-902", "event": "Revenue Threshold Met", "target": "Email", "status": "Delivered"}
+      {"id": 901, "rule_id": 1, "triggered_value": 42000, "status": "delivered", "channel": "email", "created_at": "..."}
     ]
   }
 
@@ -1439,6 +1720,8 @@ It must be clear, consistent, and auditable.
 - Thresholds should be validated for type and range.
 - Disabled rules should not trigger dispatches.
 - Delivery failures should be recorded, not hidden.
+- Quiet hours that cross midnight must be evaluated correctly.
+- Duplicate evaluator runs must avoid duplicate log rows for the same event window.
 
 ### 9. Security Considerations
 - Users should only manage their own rules.
@@ -1450,6 +1733,53 @@ It must be clear, consistent, and auditable.
 - Alert evaluation may move to a worker queue later.
 - Logs should be pageable and index-backed.
 - High-frequency rule evaluation may need batching.
+- Evaluator cadence should be configurable and bounded to avoid overlapping runs.
+
+
+## File: jobs/notification_evaluator.py
+
+### 1. Purpose
+jobs/notification_evaluator.py is the required background engine for notifications.
+It makes rules operational by evaluating active AlertRule rows on a fixed schedule.
+Without this component, rules can be created but never produce real NotificationLog entries.
+
+### 2. Responsibilities
+- Run on a scheduler every X minutes.
+- Fetch active rules.
+- Retrieve metric values from SQL or metrics tables.
+- Evaluate operator and threshold conditions.
+- Respect quiet hours.
+- Write NotificationLog rows for triggered events.
+- Optionally dispatch notifications through enabled channels.
+
+### 3. Internal Components
+- Scheduler bootstrap function.
+- evaluate_rules_tick() loop.
+- fetch_active_rules(db).
+- fetch_metric_value(rule, db).
+- evaluate_condition(value, operator, threshold).
+- maybe_send_notification(log_row, rule).
+
+### 4. Data Flow
+- Scheduler tick starts.
+- Active rules are loaded.
+- Current metric value is resolved per rule.
+- Condition is evaluated.
+- Matching rules write NotificationLog rows.
+- Delivery is attempted when enabled.
+
+### 5. Integration with Other Files
+- Reads AlertRule and writes NotificationLog in model/db_models.py.
+- Uses utils/db.py for transactional DB access.
+- Uses utils/logger.py for evaluator telemetry.
+- Can share validation helpers with controller/notification_router.py.
+- Can be invoked from server.py lifespan hooks or a dedicated worker process.
+
+### 6. Edge Cases & Failure Handling
+- Metric source unavailable: write a failed log or emit a structured error event.
+- Evaluator crash during a tick: rollback safely and resume next cycle.
+- Rule deleted mid-tick: skip safely on refresh.
+- Avoid duplicate sends for unchanged trigger state using cooldown or dedupe keys.
 
 
 ## File: agent/orchestrator.py
@@ -2227,6 +2557,7 @@ Suggested fixes:
 - Add query logging so the History page reflects real interactions.
 - Add telemetry aggregation so Analytics displays actual trends.
 - Add notification rule CRUD and dispatch logging so the Notification Center is functional.
+- Add jobs/notification_evaluator.py so active rules are evaluated automatically on schedule.
 - Add health and readiness checks so navbar and sidebar status indicators can reflect the backend state.
 - Add chart storage and serving so query responses can include viz URLs.
 - Add source metadata endpoints if the query UI needs selectable data sources.
@@ -2258,12 +2589,23 @@ Suggested fixes:
 21. If the request changed system metrics, analytics routes can aggregate the new operational data.
 22. The same backend state also feeds the dashboard cards and system health indicators.
 
+Notification-only execution flow:
+1. User creates rule.
+2. Rule is stored in AlertRule.
+3. Scheduler runs every X minutes.
+4. Evaluator fetches active rules.
+5. Evaluator checks data via SQL or metrics tables.
+6. Evaluator evaluates operator and threshold.
+7. If true, evaluator creates NotificationLog.
+8. Notification is sent by configured channel when dispatch is enabled.
+
 Implementation priority order:
 - Build config.py, utils/db.py, and model/db_models.py first.
 - Add utils/auth.py and controller/auth_router.py next.
 - Add controller/project_router.py and controller/query_router.py after persistence exists.
 - Add agent/orchestrator.py and the tool modules once the API contracts are defined.
 - Add history, analytics, and notification routers after query logs and alert rules are writable.
+- Add jobs/notification_evaluator.py immediately after notification router CRUD is working.
 - Wire server.py last so the complete backend surface is mounted cleanly.
 
 Operational rule for this backend:

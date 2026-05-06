@@ -213,39 +213,76 @@ const Protocol = () => {
       </header>
 
       {/* ── STEPS SECTION ─────────────────────────────────────────────────── */}
-      <section className="relative z-10 max-w-7xl mx-auto px-6 py-40">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-px bg-white/[0.03] border border-white/[0.03]">
-          {steps.map((step, i) => (
-            <motion.div 
-              key={i} 
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.1 }}
-              className="group bg-black p-10 hover:bg-[#030305] transition-all duration-700 border-r border-white/[0.03] last:border-r-0"
-            >
-              <div className="text-white/5 text-6xl font-serif italic mb-8 group-hover:text-white/10 transition-colors">
-                {step.id}
-              </div>
-              <h3 className="text-white text-xl font-light mb-2">{step.title}</h3>
-              <p className="text-[10px] text-white/20 uppercase tracking-[0.3em] mb-8 font-bold">{step.subtitle}</p>
-              <p className="text-[13px] text-white/40 leading-relaxed mb-10 font-light">{step.content}</p>
-              <div className="bg-[#050505] p-5 rounded-sm border border-white/[0.05] font-mono text-[11px] text-white/30 overflow-hidden">
-                <code className="block whitespace-pre opacity-80">{step.code}</code>
-              </div>
-            </motion.div>
-          ))}
+  <section className="relative z-10 max-w-7xl mx-auto px-6 py-40">
+  {/* The Grid - Now with refined borders and spacing */}
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-px bg-white/10 border border-white/10">
+    {steps.map((step, i) => (
+      <motion.div 
+        key={i} 
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ delay: i * 0.1, duration: 0.8 }}
+        className="group bg-black p-10 hover:bg-[#050508] transition-all duration-500 relative overflow-hidden"
+      >
+        {/* Subtle hover accent line at the top */}
+        <div className="absolute top-0 left-0 w-0 h-[1px] bg-white/40 group-hover:w-full transition-all duration-700" />
+
+        {/* Step Identity: Icon + Number */}
+        <div className="flex items-center justify-between mb-12">
+          <div className="text-white/30 group-hover:text-white transition-colors duration-500">
+            {step.icon}
+          </div>
+          <div className="text-white/5 text-5xl font-serif italic group-hover:text-white/10 transition-colors">
+            {step.id}
+          </div>
         </div>
 
-        {/* Safety Footer within Section */}
-        <div className="mt-12 p-8 border border-red-500/10 bg-red-500/[0.01] flex items-center gap-6">
-          <ShieldAlert size={18} className="text-red-500/30" />
-          <p className="text-[12px] text-white/20 tracking-wide">
-            <span className="text-red-500/40 font-bold mr-2 uppercase">Safety Layer:</span> 
-            AST validation enforces read-only mode. SELECT only — write ops blocked at parse time.
+        {/* Text Content */}
+        <div className="space-y-2 mb-8">
+          <h3 className="text-white text-xl font-light tracking-wide">
+            {step.title}
+          </h3>
+          <p className="text-[10px] text-white/40 uppercase tracking-[0.3em] font-bold">
+            {step.subtitle}
           </p>
         </div>
-      </section>
+
+        <p className="text-[14px] text-white/60 leading-relaxed mb-10 font-light h-20">
+          {step.content}
+        </p>
+
+        {/* Terminal Window with improved readability */}
+        <div className="bg-[#050505] rounded-sm border border-white/10 group-hover:border-white/20 transition-colors overflow-hidden">
+          <div className="bg-white/5 px-3 py-1.5 border-b border-white/5 flex gap-1">
+             <div className="w-1.5 h-1.5 rounded-full bg-white/10" />
+             <div className="w-1.5 h-1.5 rounded-full bg-white/10" />
+          </div>
+          <div className="p-4 font-mono text-[11px] text-white/40 group-hover:text-white/70 transition-colors">
+            <code className="block whitespace-pre-wrap">{step.code}</code>
+          </div>
+        </div>
+      </motion.div>
+    ))}
+  </div>
+
+  {/* Safety Footer - Retaining the theme but improving layout */}
+  <motion.div 
+    initial={{ opacity: 0 }}
+    whileInView={{ opacity: 1 }}
+    transition={{ delay: 0.5 }}
+    className="mt-12 p-8 border border-white/10 bg-white/[0.01] flex items-center gap-8 group hover:border-red-500/20 transition-colors duration-700"
+  >
+    <div className="relative">
+      <ShieldAlert size={22} className="text-white/20 group-hover:text-red-500/40 transition-colors" />
+      <div className="absolute inset-0 blur-lg bg-red-500/0 group-hover:bg-red-500/10 transition-all" />
+    </div>
+    <p className="text-[12px] text-white/30 tracking-wide leading-relaxed">
+      <span className="text-white/60 font-bold mr-2 uppercase tracking-tighter">Safety Layer:</span> 
+      AST validation enforces read-only mode. <span className="italic">SELECT</span> only — write operations are blocked at the abstract syntax tree parse time to ensure data integrity.
+    </p>
+  </motion.div>
+</section>
     </main>
   );
 };
