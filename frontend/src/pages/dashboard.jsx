@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, memo, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   ArrowUpRight,
@@ -14,7 +14,7 @@ import {
 import { Link } from 'react-router-dom';
 import Navbar from '../components/navbar';
 
-const projects = [
+const PROJECTS = [
   {
     id: 'PRJ-1024',
     name: 'Q4 Revenue Analysis',
@@ -45,15 +45,104 @@ const projects = [
   },
 ];
 
-const Dashboard = () => {
+const STATS_CONFIG = [
+  { label: 'Uptime', value: '99.99%', icon: Zap },
+  { label: 'Neural_Load', value: '1,284', icon: Cpu },
+  { label: 'Throughput', value: '4.2 TB', icon: Database },
+  { label: 'Logic_Gate', value: 'VERIFIED', icon: ShieldCheck },
+];
+
+const BG_GRID_STYLE = {
+  backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
+  backgroundSize: '40px 40px',
+};
+
+const StatItem = memo(({ stat }) => (
+  <div className="bg-app px-6 py-4 flex flex-col min-w-[140px] hover-bg-app-strong transition-colors">
+    <span className="text-[9px] uppercase tracking-[0.2em] text-muted font-bold mb-2">
+      {stat.label}
+    </span>
+    <div className="flex items-center gap-3">
+      <stat.icon size={12} strokeWidth={1.5} className="text-[#98465f]" />
+      <span className="text-sm font-bold text-white tracking-widest leading-none">
+        {stat.value}
+      </span>
+    </div>
+  </div>
+));
+
+const ProjectCard = memo(({ project, idx }) => (
+  <Link to={`/projects/${project.id.toLowerCase()}`}>
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: idx * 0.05 }}
+      className="bg-[#0a0a0c] border border-white/5 rounded-none p-6 hover:border-[#98465f]/40 transition-colors group relative flex flex-col h-full"
+    >
+      {/* Active Indicator Line */}
+      <div
+        className={`absolute top-0 left-0 w-full h-px transition-colors ${project.status === 'ACTIVE' ? 'bg-[#98465f]' : 'bg-transparent group-hover:bg-white/10'}`}
+      />
+
+      {/* Top */}
+      <div className="flex justify-between items-start mb-6">
+        <span className="text-[9px] font-mono tracking-widest text-slate-600">
+          {project.id}
+        </span>
+        <ArrowUpRight
+          size={14}
+          strokeWidth={1}
+          className="text-slate-600 group-hover:text-white transition-colors"
+        />
+      </div>
+
+      {/* Title */}
+      <h3 className="text-sm text-white tracking-wide uppercase mb-4 flex-grow">
+        {project.name}
+      </h3>
+
+      {/* Tags */}
+      <div className="flex flex-wrap gap-2 mb-6">
+        {project.sources.map((s) => (
+          <span
+            key={s}
+            className="text-[9px] font-bold tracking-widest uppercase px-2 py-1 border border-white/5 bg-black/50 text-slate-500 rounded-none"
+          >
+            {s}
+          </span>
+        ))}
+      </div>
+
+      {/* Footer */}
+      <div className="flex justify-between items-center text-[9px] uppercase tracking-widest font-bold pt-4 border-t border-white/5">
+        <span
+          className={`${
+            project.status === 'ACTIVE'
+              ? 'text-[#98465f]'
+              : project.status === 'PROCESSING'
+                ? 'text-blue-400'
+                : 'text-slate-600'
+          }`}
+        >
+          {project.status}
+        </span>
+        <span className="text-slate-600 font-mono">{project.lastActivity}</span>
+      </div>
+    </motion.div>
+  </Link>
+));
+
+function Dashboard() {
   const [searchTerm, setSearchTerm] = useState('');
 
-  const stats = [
-    { label: 'Uptime', value: '99.99%', icon: Zap },
-    { label: 'Neural_Load', value: '1,284', icon: Cpu },
-    { label: 'Throughput', value: '4.2 TB', icon: Database },
-    { label: 'Logic_Gate', value: 'VERIFIED', icon: ShieldCheck },
-  ];
+  const filteredProjects = useMemo(() => {
+    if (!searchTerm) return PROJECTS;
+    return PROJECTS.filter(
+      (p) =>
+        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.id.toLowerCase().includes(searchTerm.toLowerCase()),
+    );
+  }, [searchTerm]);
 
   return (
     <div className="min-h-screen bg-app text-muted font-satoshi selection-accent">
@@ -62,10 +151,7 @@ const Dashboard = () => {
       {/* Subtle CAD Grid Background */}
       <div
         className="fixed inset-0 pointer-events-none opacity-[0.03]"
-        style={{
-          backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
-          backgroundSize: '40px 40px',
-        }}
+        style={BG_GRID_STYLE}
       />
 
       <div className="relative z-10 max-w-[1400px] mx-auto px-8 py-10">
@@ -97,25 +183,8 @@ const Dashboard = () => {
 
           {/* TELEMETRY STATS - HUD GRID */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-white/5 border border-white/10 shrink-0">
-            {stats.map((stat, i) => (
-              <div
-                key={i}
-                className="bg-app px-6 py-4 flex flex-col min-w-[140px] hover-bg-app-strong transition-colors"
-              >
-                <span className="text-[9px] uppercase tracking-[0.2em] text-muted font-bold mb-2">
-                  {stat.label}
-                </span>
-                <div className="flex items-center gap-3">
-                  <stat.icon
-                    size={12}
-                    strokeWidth={1.5}
-                    className="text-[#98465f]"
-                  />
-                  <span className="text-sm font-bold text-white tracking-widest leading-none">
-                    {stat.value}
-                  </span>
-                </div>
-              </div>
+            {STATS_CONFIG.map((stat, i) => (
+              <StatItem key={i} stat={stat} />
             ))}
           </div>
         </header>
@@ -169,72 +238,13 @@ const Dashboard = () => {
 
         {/* --- PROJECT GRID --- */}
         <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-          {projects.map((project, idx) => (
-            <Link to={`/projects/${project.id.toLowerCase()}`} key={project.id}>
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.05 }}
-                className="bg-[#0a0a0c] border border-white/5 rounded-none p-6 hover:border-[#98465f]/40 transition-colors group relative flex flex-col h-full"
-              >
-                {/* Active Indicator Line */}
-                <div
-                  className={`absolute top-0 left-0 w-full h-px transition-colors ${project.status === 'ACTIVE' ? 'bg-[#98465f]' : 'bg-transparent group-hover:bg-white/10'}`}
-                />
-
-                {/* Top */}
-                <div className="flex justify-between items-start mb-6">
-                  <span className="text-[9px] font-mono tracking-widest text-slate-600">
-                    {project.id}
-                  </span>
-                  <ArrowUpRight
-                    size={14}
-                    strokeWidth={1}
-                    className="text-slate-600 group-hover:text-white transition-colors"
-                  />
-                </div>
-
-                {/* Title */}
-                <h3 className="text-sm text-white tracking-wide uppercase mb-4 flex-grow">
-                  {project.name}
-                </h3>
-
-                {/* Tags */}
-                <div className="flex flex-wrap gap-2 mb-6">
-                  {project.sources.map((s) => (
-                    <span
-                      key={s}
-                      className="text-[9px] font-bold tracking-widest uppercase px-2 py-1 border border-white/5 bg-black/50 text-slate-500 rounded-none"
-                    >
-                      {s}
-                    </span>
-                  ))}
-                </div>
-
-                {/* Footer */}
-                <div className="flex justify-between items-center text-[9px] uppercase tracking-widest font-bold pt-4 border-t border-white/5">
-                  <span
-                    className={`${
-                      project.status === 'ACTIVE'
-                        ? 'text-[#98465f]'
-                        : project.status === 'PROCESSING'
-                          ? 'text-blue-400'
-                          : 'text-slate-600'
-                    }`}
-                  >
-                    {project.status}
-                  </span>
-                  <span className="text-slate-600 font-mono">
-                    {project.lastActivity}
-                  </span>
-                </div>
-              </motion.div>
-            </Link>
+          {filteredProjects.map((project, idx) => (
+            <ProjectCard key={project.id} project={project} idx={idx} />
           ))}
         </section>
       </div>
     </div>
   );
-};
+}
 
 export default Dashboard;

@@ -1,13 +1,23 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Cpu } from 'lucide-react';
 
-export default function GlobalLoader() {
+const slideKeyframes = `
+  @keyframes slide {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(300%); }
+  }
+`;
+
+function GlobalLoader() {
   return (
     <div className="min-h-screen bg-app flex flex-col items-center justify-center font-satoshi selection-accent relative">
-      <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{
-        backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
-        backgroundSize: '40px 40px',
-      }} />
+      <div
+        className="absolute inset-0 pointer-events-none opacity-[0.03]"
+        style={{
+          backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
+          backgroundSize: '40px 40px',
+        }}
+      />
       <div className="flex flex-col items-center gap-4 relative z-10">
         <Cpu size={32} className="text-[#98465f] animate-pulse" />
         <div className="flex flex-col items-center gap-2">
@@ -19,12 +29,9 @@ export default function GlobalLoader() {
           </div>
         </div>
       </div>
-      <style>{`
-        @keyframes slide {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(300%); }
-        }
-      `}</style>
+      <style>{slideKeyframes}</style>
     </div>
   );
 }
+
+export default memo(GlobalLoader);
