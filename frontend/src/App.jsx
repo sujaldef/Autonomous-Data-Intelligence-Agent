@@ -1,10 +1,10 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, memo } from 'react';
 import {
- BrowserRouter,
- Routes,
- Route,
- useLocation,
- Navigate,
+  BrowserRouter,
+  Routes,
+  Route,
+  useLocation,
+  Navigate,
 } from 'react-router-dom';
 import ScrollToTop from './components/ScrollToTop';
 import GlobalLoader from './components/GlobalLoader';
@@ -25,10 +25,6 @@ const Docs = lazy(() => import('./pages/docs'));
 function AppShell() {
   const { pathname } = useLocation();
 
-  const isLanding = pathname === '/';
-  const isAuth = pathname.startsWith('/auth');
-  const isDoc = ['/architecture', '/protocol', '/docs'].includes(pathname);
-
   return (
     <Suspense fallback={<GlobalLoader />}>
       <Routes>
@@ -37,7 +33,7 @@ function AppShell() {
         <Route path="/architecture" element={<Architecture />} />
         <Route path="/protocol" element={<Protocol />} />
         <Route path="/docs" element={<Docs />} />
-        
+
         <Route path="/dashboard" element={<Dashboard />} />
 
         <Route path="/projects" element={<ProjectLayout />}>
@@ -52,13 +48,15 @@ function AppShell() {
   );
 }
 
+const MemoizedAppShell = memo(AppShell);
+
 function App() {
- return (
- <BrowserRouter>
- <ScrollToTop />
- <AppShell />
- </BrowserRouter>
- );
+  return (
+    <BrowserRouter>
+      <ScrollToTop />
+      <MemoizedAppShell />
+    </BrowserRouter>
+  );
 }
 
 export default App;

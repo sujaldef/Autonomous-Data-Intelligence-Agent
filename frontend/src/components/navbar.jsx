@@ -1,13 +1,13 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, FolderKanban, Cpu, User } from 'lucide-react';
 
-const Navbar = () => {
-  const navItems = [
-    { to: '/dashboard', label: 'CONSOLE', icon: LayoutDashboard },
-    { to: '/projects', label: 'WORKSPACES', icon: FolderKanban },
-  ];
+const navItems = [
+  { to: '/dashboard', label: 'CONSOLE', icon: LayoutDashboard },
+  { to: '/projects', label: 'WORKSPACES', icon: FolderKanban },
+];
 
+function Navbar() {
   return (
     <header className="sticky top-0 z-[100] bg-app border-b border-white/5 px-8">
       <div className="max-w-[1400px] mx-auto h-14 flex items-center justify-between">
@@ -54,6 +54,6 @@ const Navbar = () => {
       </div>
     </header>
   );
-};
+}
 
-export default Navbar;
+export default memo(Navbar);

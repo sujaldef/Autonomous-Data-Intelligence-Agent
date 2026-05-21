@@ -1,27 +1,36 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
 import { Fingerprint, Menu, X, Activity } from 'lucide-react';
 
-const NavForLanding = () => {
+const NAV_LINKS = [
+  { name: 'Architecture', path: '/architecture' },
+  { name: 'Protocol', path: '/protocol' },
+  { name: 'Docs', path: '/docs' },
+];
+
+const pulseAnimation = { opacity: [0, 1, 0], duration: 2, repeat: Infinity };
+
+function NavForLanding() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
 
-  // Handle background blur on scroll
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
     };
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const navLinks = [
-    { name: 'Architecture', path: '/architecture' },
-    { name: 'Protocol', path: '/protocol' },
-    { name: 'Docs', path: '/docs' },
-  ];
+  const toggleMobileMenu = useCallback(() => {
+    setMobileMenuOpen(prev => !prev);
+  }, []);
+
+  const closeMobileMenu = useCallback(() => {
+    setMobileMenuOpen(false);
+  }, []);
 
   return (
     <nav
@@ -40,8 +49,7 @@ const NavForLanding = () => {
               strokeWidth={1.5}
             />
             <motion.div
-              animate={{ opacity: [0, 1, 0] }}
-              transition={{ duration: 2, repeat: Infinity }}
+              animate={pulseAnimation}
               className="absolute -top-1 -right-1 w-1.5 h-1.5 bg-[#98465f] rounded-full"
             />
           </div>
@@ -53,7 +61,7 @@ const NavForLanding = () => {
         {/* DESKTOP NAV - Slim Typography */}
         <div className="hidden md:flex items-center gap-12">
           <div className="flex items-center gap-10">
-            {navLinks.map((link) => (
+            {NAV_LINKS.map((link) => (
               <Link
                 key={link.name}
                 to={link.path}
@@ -78,6 +86,56 @@ const NavForLanding = () => {
                 size={12}
                 className="text-[#98465f] group-hover:text-black animate-pulse"
               />
+              <span className="text-[9px] font-bold uppercase tracking-[0.3em] text-white group-hover:text-black">
+                {location.pathname === '/auth'
+                  ? 'System_Lock'
+                  : 'Access_Portal'}
+              </span>
+            </motion.button>
+          </Link>
+        </div>
+
+        {/* MOBILE TOGGLE */}
+        <button
+          className="md:hidden text-white"
+          onClick={toggleMobileMenu}
+          aria-label="Toggle mobile menu"
+        >
+          {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
+      </div>
+
+      {/* MOBILE MENU OVERLAY */}
+      <motion.div
+        initial={false}
+        animate={
+          mobileMenuOpen ? { opacity: 1, x: 0 } : { opacity: 0, x: '100%' }
+        }
+        className="fixed inset-0 bg-app z-[90] flex flex-col items-center justify-center gap-8 md:hidden"
+      >
+        {NAV_LINKS.map((link) => (
+          <Link
+            key={link.name}
+            to={link.path}
+            onClick={closeMobileMenu}
+            className="text-xl uppercase tracking-[0.5em] text-white font-light"
+          >
+            {link.name}
+          </Link>
+        ))}
+        <Link
+          to="/auth"
+          onClick={closeMobileMenu}
+          className="mt-4 px-10 py-4 bg-[#98465f] text-white text-xs tracking-[0.4em] uppercase"
+        >
+          Initialize
+        </Link>
+      </motion.div>
+    </nav>
+  );
+}
+
+export default memo(NavForLanding);
               <span className="text-[9px] font-bold uppercase tracking-[0.3em] text-white group-hover:text-black">
                 {location.pathname === '/auth'
                   ? 'System_Lock'
