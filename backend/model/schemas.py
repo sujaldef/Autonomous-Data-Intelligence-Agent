@@ -8,13 +8,36 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
+# ============================================================================
+# Base Configuration
+# ============================================================================
+
+class ORMModel(BaseModel):
+    """Base model for ORM-enabled schemas."""
+    model_config = ConfigDict(from_attributes=True)
+
+
+class EmailNormalizationMixin:
+    """Mixin for email normalization validation."""
+    @staticmethod
+    def _normalize_email(value: str) -> str:
+        """Normalize email to lowercase and strip whitespace."""
+        return value.strip().lower() if value else value
+
+
+# ============================================================================
+# System & Health Schemas
+# ============================================================================
+
 class AppInfo(BaseModel):
+    """Application information."""
     name: str
     version: str
     status: str
 
 
 class SystemHealthResponse(BaseModel):
+    """System health check response."""
     status: str
     database: str
     scheduler: str
@@ -23,6 +46,7 @@ class SystemHealthResponse(BaseModel):
 
 
 class ReadinessResponse(BaseModel):
+    """Readiness check response."""
     ready: bool
     database: str
     scheduler: str
@@ -30,13 +54,17 @@ class ReadinessResponse(BaseModel):
 
 
 class GenericErrorResponse(BaseModel):
+    """Generic error response."""
     detail: str
     error_code: Optional[str] = None
 
 
-class UserRead(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+# ============================================================================
+# Authentication Schemas
+# ============================================================================
 
+class UserRead(ORMModel):
+    """User information read model."""
     id: int
     name: str
     email: str
@@ -46,6 +74,7 @@ class UserRead(BaseModel):
 
 
 class SignupRequest(BaseModel):
+    """User signup request."""
     name: str = Field(min_length=2, max_length=120)
     email: str = Field(min_length=5, max_length=255)
     password: str = Field(min_length=8, max_length=255)
@@ -53,53 +82,63 @@ class SignupRequest(BaseModel):
     @field_validator("email")
     @classmethod
     def normalize_email(cls, value: str) -> str:
-        return value.strip().lower()
+        return EmailNormalizationMixin._normalize_email(value)
 
 
 class LoginRequest(BaseModel):
+    """User login request."""
     email: str = Field(min_length=5, max_length=255)
     password: str = Field(min_length=8, max_length=255)
 
     @field_validator("email")
     @classmethod
     def normalize_email(cls, value: str) -> str:
-        return value.strip().lower()
+        return EmailNormalizationMixin._normalize_email(value)
 
 
 class AuthResponse(BaseModel):
+    """Authentication response with token and user info."""
     access_token: str
     token_type: str = "bearer"
     user: UserRead
 
 
 class CurrentUserResponse(BaseModel):
+    """Current user response."""
     user: UserRead
 
 
+# ============================================================================
+# Query & Execution Schemas
+# ============================================================================
+
 class QueryRequest(BaseModel):
+    """Query request schema."""
     session_id: str = Field(min_length=3, max_length=120)
     query: str = Field(min_length=1, max_length=2000)
     project_id: Optional[str] = Field(default=None, max_length=120)
     sources: List[str] = Field(default_factory=lambda: ["SQL", "RAG", "INSIGHT"])
 
-    @field_validator("query")
+    @field_validator("query", mode="before")
     @classmethod
     def normalize_query(cls, value: str) -> str:
-        return value.strip()
+        return value.strip() if value else value
 
-    @field_validator("sources")
+    @field_validator("sources", mode="before")
     @classmethod
     def normalize_sources(cls, value: List[str]) -> List[str]:
-        return [item.strip().upper() for item in value if item and item.strip()]
+        return [item.strip().upper() for item in value if item and isinstance(item, str) and item.strip()]
 
 
 class ToolTrace(BaseModel):
+    """Execution trace for a tool."""
     tool: str
     observation: str
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
 class QueryResponse(BaseModel):
+    """Query response with answer and trace."""
     answer: str
     execution_trace: List[ToolTrace] = Field(default_factory=list)
     chart_url: Optional[str] = None
@@ -110,9 +149,12 @@ class QueryResponse(BaseModel):
     query_log_id: Optional[int] = None
 
 
-class ProjectSummary(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+# ============================================================================
+# Project Schemas
+# ============================================================================
 
+class ProjectSummary(ORMModel):
+    """Project summary information."""
     id: int
     route_id: str
     name: str
@@ -124,30 +166,38 @@ class ProjectSummary(BaseModel):
 
 
 class ProjectDetail(ProjectSummary):
+    """Project details with additional fields."""
     owner_id: int
     is_archived: bool
 
 
 class ProjectListResponse(BaseModel):
+    """List of projects response."""
     projects: List[ProjectSummary]
 
 
 class ProjectDetailResponse(BaseModel):
+    """Single project detail response."""
     project: ProjectDetail
 
 
 class SourceOption(BaseModel):
+    """Source option with description."""
     name: str
     description: str
 
 
 class SourceListResponse(BaseModel):
+    """List of available sources."""
     sources: List[SourceOption]
 
 
-class HistoryItem(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+# ============================================================================
+# History & Analytics Schemas
+# ============================================================================
 
+class HistoryItem(ORMModel):
+    """Single history item."""
     id: int
     query: str
     answer: str
@@ -160,6 +210,7 @@ class HistoryItem(BaseModel):
 
 
 class HistoryResponse(BaseModel):
+    """History items response with pagination."""
     items: List[HistoryItem]
     page: int
     page_size: int
@@ -167,6 +218,7 @@ class HistoryResponse(BaseModel):
 
 
 class MetricCard(BaseModel):
+    """Single metric card."""
     key: str
     label: str
     value: Any
@@ -175,17 +227,20 @@ class MetricCard(BaseModel):
 
 
 class SourceMixItem(BaseModel):
+    """Source mix data point."""
     name: str
     value: float
 
 
 class TimeSeriesPoint(BaseModel):
+    """Single time series data point."""
     label: str
     value: float
     timestamp: Optional[datetime] = None
 
 
 class AnalyticsTelemetry(BaseModel):
+    """Complete analytics telemetry."""
     cards: List[MetricCard]
     source_mix: List[SourceMixItem]
     series: Dict[str, List[TimeSeriesPoint]]
@@ -194,11 +249,32 @@ class AnalyticsTelemetry(BaseModel):
 
 
 class AnalyticsSeriesResponse(BaseModel):
+    """Analytics series response."""
     series_name: str
     points: List[TimeSeriesPoint]
 
 
+# ============================================================================
+# Alert Rule Schemas with Consolidated Validation
+# ============================================================================
+
+class OperatorValidationMixin:
+    """Mixin for operator validation."""
+    VALID_OPERATORS = {"<", ">", "=", "<=", ">="}
+    
+    @staticmethod
+    def _validate_operator(value: Optional[str]) -> Optional[str]:
+        """Validate and normalize operator."""
+        if value is None:
+            return value
+        normalized = value.strip()
+        if normalized not in OperatorValidationMixin.VALID_OPERATORS:
+            raise ValueError(f"operator must be one of {', '.join(OperatorValidationMixin.VALID_OPERATORS)}")
+        return normalized
+
+
 class AlertRuleCreate(BaseModel):
+    """Create alert rule request."""
     metric: str = Field(min_length=1, max_length=120)
     operator: str = Field(min_length=1, max_length=10)
     threshold: float
@@ -208,16 +284,14 @@ class AlertRuleCreate(BaseModel):
     is_active: bool = True
     project_id: Optional[int] = None
 
-    @field_validator("operator")
+    @field_validator("operator", mode="before")
     @classmethod
-    def normalize_operator(cls, value: str) -> str:
-        normalized = value.strip()
-        if normalized not in {"<", ">", "=", "<=", ">="}:
-            raise ValueError("operator must be one of <, >, =, <=, >=")
-        return normalized
+    def validate_operator(cls, value: str) -> str:
+        return OperatorValidationMixin._validate_operator(value)
 
 
 class AlertRuleUpdate(BaseModel):
+    """Update alert rule request."""
     metric: Optional[str] = Field(default=None, max_length=120)
     operator: Optional[str] = Field(default=None, max_length=10)
     threshold: Optional[float] = None
@@ -227,20 +301,14 @@ class AlertRuleUpdate(BaseModel):
     is_active: Optional[bool] = None
     project_id: Optional[int] = None
 
-    @field_validator("operator")
+    @field_validator("operator", mode="before")
     @classmethod
-    def normalize_operator(cls, value: Optional[str]) -> Optional[str]:
-        if value is None:
-            return value
-        normalized = value.strip()
-        if normalized not in {"<", ">", "=", "<=", ">="}:
-            raise ValueError("operator must be one of <, >, =, <=, >=")
-        return normalized
+    def validate_operator(cls, value: Optional[str]) -> Optional[str]:
+        return OperatorValidationMixin._validate_operator(value)
 
 
-class AlertRuleRead(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
+class AlertRuleRead(ORMModel):
+    """Alert rule read model."""
     id: int
     user_id: int
     project_id: Optional[int] = None
@@ -257,9 +325,12 @@ class AlertRuleRead(BaseModel):
     updated_at: datetime
 
 
-class NotificationLogRead(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+# ============================================================================
+# Notification Schemas
+# ============================================================================
 
+class NotificationLogRead(ORMModel):
+    """Notification log read model."""
     id: int
     rule_id: int
     user_id: int
@@ -274,14 +345,17 @@ class NotificationLogRead(BaseModel):
 
 
 class NotificationRulesResponse(BaseModel):
+    """Notification rules response."""
     rules: List[AlertRuleRead]
     total: int
 
 
 class NotificationLogsResponse(BaseModel):
+    """Notification logs response."""
     logs: List[NotificationLogRead]
     total: int
 
 
 class NotificationUnreadResponse(BaseModel):
+    """Unread notifications count."""
     unread_count: int
