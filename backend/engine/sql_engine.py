@@ -17,17 +17,41 @@ from utils.logger import get_logger
 settings = get_settings()
 logger = get_logger(__name__)
 
-FORBIDDEN_SQL_PATTERNS = re.compile(r"\b(insert|update|delete|drop|alter|truncate|replace|create|grant|revoke|attach|pragma)\b", re.IGNORECASE)
+# Regex pattern to prevent write operations
+FORBIDDEN_SQL_PATTERNS = re.compile(
+    r"\b(insert|update|delete|drop|alter|truncate|replace|create|grant|revoke|attach|pragma)\b",
+    re.IGNORECASE
+)
+
+# Query builder intent keywords
+INTENT_KEYWORDS = {
+    "history": ["history", "audit", "recent query", "query log", "logs"],
+    "alert": ["notification", "alert", "rule", "dispatch"],
+    "project": ["project", "workspace", "sidebar", "dashboard", "card"],
+    "metrics": ["latency", "revenue", "queries", "metric", "analytics", "trend", "health"],
+}
 
 
 @dataclass(frozen=True)
 class SQLQueryPlan:
+    """Represents a validated SQL query with parameters and metadata."""
     sql: str
     params: dict[str, Any]
     description: str
 
 
 def validate_sql(sql: str) -> str:
+    """Validate SQL for read-only operations.
+    
+    Args:
+        sql: SQL query string
+        
+    Returns:
+        Cleaned SQL string
+        
+    Raises:
+        ValueError: If query violates security constraints
+    """
     cleaned = sql.strip()
     if ";" in cleaned:
         raise ValueError("Multiple statements are not allowed")
@@ -39,6 +63,14 @@ def validate_sql(sql: str) -> str:
 
 
 def serialize_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Serialize database rows for JSON output.
+    
+    Args:
+        rows: List of row dictionaries
+        
+    Returns:
+        Serialized rows with datetime objects converted to ISO format
+    """
     serialized: list[dict[str, Any]] = []
     for row in rows:
         item: dict[str, Any] = {}
@@ -52,6 +84,16 @@ def serialize_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def execute_sql(sql: str, db: Session, params: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """Execute validated read-only SQL query.
+    
+    Args:
+        sql: SQL query string
+        db: Database session
+        params: Query parameters
+        
+    Returns:
+        Query result with rows, metadata, and execution details
+    """
     validated_sql = validate_sql(sql)
     result = db.execute(text(validated_sql), dict(params or {}))
     rows = [dict(row) for row in result.mappings().all()]
@@ -65,6 +107,14 @@ def execute_sql(sql: str, db: Session, params: Mapping[str, Any] | None = None) 
 
 
 def inspect_schema(db: Session) -> dict[str, list[str]]:
+    """Inspect database schema and return table-column mapping.
+    
+    Args:
+        db: Database session
+        
+    Returns:
+        Dict mapping table names to column names
+    """
     inspector = inspect(db.bind)
     schema: dict[str, list[str]] = {}
     for table_name in inspector.get_table_names():
@@ -73,13 +123,24 @@ def inspect_schema(db: Session) -> dict[str, list[str]]:
 
 
 def build_query_from_intent(query_text: str, user_id: int, project_id: int | None = None, limit: int | None = None) -> SQLQueryPlan:
+    """Build SQL query from natural language intent.
+    
+    Args:
+        query_text: User query text
+        user_id: User ID for filtering
+        project_id: Optional project ID filter
+        limit: Result limit (defaults to settings.max_query_results)
+        
+    Returns:
+        SQLQueryPlan with generated query and parameters
+    """
     text_value = query_text.lower().strip()
     limit_value = limit or settings.max_query_results
     params: dict[str, Any] = {"user_id": user_id, "limit": limit_value}
     if project_id is not None:
         params["project_id"] = project_id
 
-    if any(term in text_value for term in ["history", "audit", "recent query", "query log", "logs"]):
+    if any(term in text_value for term in INTENT_KEYWORDS["history"]):
         sql = """
             SELECT id, session_id, query_text, answer_text, status, latency_ms, created_at, project_id
             FROM query_logs
@@ -91,7 +152,7 @@ def build_query_from_intent(query_text: str, user_id: int, project_id: int | Non
         project_clause = "AND project_id = :project_id" if project_id is not None else ""
         return SQLQueryPlan(sql=sql.format(project_clause=project_clause), params=params, description="query history")
 
-    if any(term in text_value for term in ["notification", "alert", "rule", "dispatch"]):
+    if any(term in text_value for term in INTENT_KEYWORDS["alert"]):
         sql = """
             SELECT id, metric, operator, threshold, notification_type, quiet_hours_start, quiet_hours_end, is_active, created_at
             FROM alert_rules
@@ -103,7 +164,7 @@ def build_query_from_intent(query_text: str, user_id: int, project_id: int | Non
         project_clause = "AND project_id = :project_id" if project_id is not None else ""
         return SQLQueryPlan(sql=sql.format(project_clause=project_clause), params=params, description="alert rules")
 
-    if any(term in text_value for term in ["project", "workspace", "sidebar", "dashboard", "card"]):
+    if any(term in text_value for term in INTENT_KEYWORDS["project"]):
         sql = """
             SELECT id, route_id, name, description, status, source_tags, last_activity_at, is_archived
             FROM projects
@@ -113,7 +174,7 @@ def build_query_from_intent(query_text: str, user_id: int, project_id: int | Non
         """
         return SQLQueryPlan(sql=sql, params=params, description="project overview")
 
-    if any(term in text_value for term in ["latency", "revenue", "queries", "metric", "analytics", "trend", "health"]):
+    if any(term in text_value for term in INTENT_KEYWORDS["metrics"]):
         sql = """
             SELECT metric_name, metric_value, unit, source, observed_at, project_id
             FROM system_metrics
@@ -138,6 +199,19 @@ def build_query_from_intent(query_text: str, user_id: int, project_id: int | Non
 
 
 def run(query_spec: Mapping[str, Any] | str | SQLQueryPlan, db: Session) -> dict[str, Any]:
+    """Execute SQL query from various specification formats.
+    
+    Args:
+        query_spec: SQLQueryPlan, SQL string, or dict with 'sql' and 'params'
+        db: Database session
+        
+    Returns:
+        Query execution result
+        
+    Raises:
+        ValueError: If dict spec missing required 'sql' field
+        TypeError: If query_spec is unsupported type
+    """
     if isinstance(query_spec, SQLQueryPlan):
         return execute_sql(query_spec.sql, db, query_spec.params)
     if isinstance(query_spec, str):

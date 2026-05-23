@@ -21,8 +21,19 @@ from utils.logger import get_logger
 settings = get_settings()
 logger = get_logger(__name__)
 
+# Z-score threshold for anomaly detection
+ANOMALY_Z_SCORE_THRESHOLD = 2.0
+
 
 def _parse_time(value: str | None) -> time_type | None:
+    """Parse time string in HH:MM format.
+    
+    Args:
+        value: Time string or None
+        
+    Returns:
+        time_type object or None
+    """
     if not value:
         return None
     hour, minute = value.split(":", 1)
@@ -30,6 +41,14 @@ def _parse_time(value: str | None) -> time_type | None:
 
 
 def _normalize_datetime(value: datetime | None) -> datetime | None:
+    """Ensure datetime is in UTC timezone.
+    
+    Args:
+        value: Datetime value
+        
+    Returns:
+        UTC-aware datetime
+    """
     if value is None:
         return None
     if value.tzinfo is None:
@@ -38,6 +57,15 @@ def _normalize_datetime(value: datetime | None) -> datetime | None:
 
 
 def _within_quiet_hours(rule: AlertRule, now: datetime) -> bool:
+    """Check if current time is within rule's quiet hours.
+    
+    Args:
+        rule: AlertRule with quiet_hours_start and quiet_hours_end
+        now: Current datetime
+        
+    Returns:
+        True if within quiet hours, False otherwise
+    """
     start = _parse_time(rule.quiet_hours_start)
     end = _parse_time(rule.quiet_hours_end)
     if not start or not end:
@@ -49,6 +77,17 @@ def _within_quiet_hours(rule: AlertRule, now: datetime) -> bool:
 
 
 def _is_duplicate_trigger(rule: AlertRule, triggered_value: float, now: datetime, interval_seconds: int) -> bool:
+    """Check if alert was recently triggered with same value.
+    
+    Args:
+        rule: AlertRule to check
+        triggered_value: Current metric value
+        now: Current datetime
+        interval_seconds: Minimum interval between triggers
+        
+    Returns:
+        True if duplicate trigger detected
+    """
     last_triggered_at = _normalize_datetime(rule.last_triggered_at)
     if last_triggered_at is None:
         return False
@@ -59,6 +98,16 @@ def _is_duplicate_trigger(rule: AlertRule, triggered_value: float, now: datetime
 
 
 def _evaluate_condition(value: float, operator: str, threshold: float) -> bool:
+    """Evaluate if value satisfies operator and threshold.
+    
+    Args:
+        value: Metric value
+        operator: Comparison operator (<, >, =, <=, >=)
+        threshold: Threshold value
+        
+    Returns:
+        True if condition is met
+    """
     if operator == "<":
         return value < threshold
     if operator == ">":
@@ -73,12 +122,29 @@ def _evaluate_condition(value: float, operator: str, threshold: float) -> bool:
 
 
 def _dispatch_status(rule: AlertRule, quiet: bool) -> str:
+    """Determine notification dispatch status.
+    
+    Args:
+        rule: AlertRule
+        quiet: Whether in quiet hours
+        
+    Returns:
+        Status string ('suppressed' or 'delivered')
+    """
     if quiet:
         return "suppressed"
     return "delivered"
 
 
 def evaluate_active_rules(db: Session) -> dict[str, int]:
+    """Evaluate all active alert rules and create notification logs.
+    
+    Args:
+        db: Database session
+        
+    Returns:
+        Stats dict with evaluated_rules, created_logs, skipped_rules counts
+    """
     now = datetime.now(timezone.utc)
     active_rules = db.query(AlertRule).filter(AlertRule.is_active.is_(True)).all()
     created_logs = 0
@@ -120,13 +186,21 @@ def evaluate_active_rules(db: Session) -> dict[str, int]:
 
 @dataclass
 class SchedulerStatus:
+    """Current scheduler status and execution history."""
     running: bool
     last_run: datetime | None
     last_result: dict[str, int] | None
 
 
 class NotificationScheduler:
+    """Background scheduler for evaluating alert rules and creating notifications."""
+    
     def __init__(self, interval_seconds: int | None = None) -> None:
+        """Initialize scheduler.
+        
+        Args:
+            interval_seconds: Evaluation interval in seconds (defaults to settings)
+        """
         self.interval_seconds = interval_seconds or settings.scheduler_interval_seconds
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
@@ -135,6 +209,7 @@ class NotificationScheduler:
         self._last_result: dict[str, int] | None = None
 
     def start(self) -> None:
+        """Start background scheduler thread."""
         if not settings.enable_scheduler:
             logger.info("scheduler_disabled")
             return
@@ -147,6 +222,7 @@ class NotificationScheduler:
             logger.info("scheduler_started")
 
     def stop(self) -> None:
+        """Stop background scheduler thread."""
         self._stop_event.set()
         thread = self._thread
         if thread and thread.is_alive():
@@ -154,6 +230,11 @@ class NotificationScheduler:
         logger.info("scheduler_stopped")
 
     def run_once(self) -> dict[str, int]:
+        """Execute single evaluation cycle.
+        
+        Returns:
+            Stats dict with evaluation results
+        """
         with SessionLocal() as db:
             result = evaluate_active_rules(db)
             db.commit()
@@ -162,6 +243,7 @@ class NotificationScheduler:
         return result
 
     def _run_loop(self) -> None:
+        """Background evaluation loop."""
         while not self._stop_event.is_set():
             try:
                 self.run_once()
@@ -170,4 +252,13 @@ class NotificationScheduler:
             self._stop_event.wait(self.interval_seconds)
 
     def status(self) -> SchedulerStatus:
-        return SchedulerStatus(running=bool(self._thread and self._thread.is_alive()), last_run=self._last_run, last_result=self._last_result)
+        """Get current scheduler status.
+        
+        Returns:
+            SchedulerStatus with running state and last execution details
+        """
+        return SchedulerStatus(
+            running=bool(self._thread and self._thread.is_alive()),
+            last_run=self._last_run,
+            last_result=self._last_result
+        )

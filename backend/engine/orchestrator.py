@@ -13,15 +13,36 @@ from engine import action_engine, insight_engine, rag_engine, sql_engine
 from engine.viz_engine import render_chart
 from model.db_models import ConversationSession, Project, QueryLog, User
 from model.llm import get_llm_client
-from model.schemas import QueryRequest, ToolTrace
+from model.schemas import QueryRequest, ToolTrace, TimeSeriesPoint
 from utils.logger import get_logger
 
 
 logger = get_logger(__name__)
 
+# Metric extraction patterns for alert creation
+METRIC_KEYWORDS = {
+    "monthly_revenue": ["revenue"],
+    "avg_latency_ms": ["latency"],
+    "query_count": ["query"],
+}
+
+# Chart triggering keywords
+CHART_KEYWORDS = ["chart", "graph", "trend", "revenue", "latency", "queries", "analytics"]
+
+# Numeric field priorities for data extraction
+NUMERIC_FIELD_PRIORITIES = (
+    "metric_value", "value", "latency_ms", "confidence", "threshold"
+)
+
+# Label field priorities for data extraction
+LABEL_FIELD_PRIORITIES = (
+    "created_at", "observed_at", "date", "label", "metric_name", "query_text"
+)
+
 
 @dataclass
 class OrchestrationResult:
+    """Result of orchestration with answer, trace, and metadata."""
     answer: str
     execution_trace: list[dict[str, Any]] = field(default_factory=list)
     chart_url: str | None = None
@@ -31,12 +52,29 @@ class OrchestrationResult:
 
 
 def build_session_context(session: ConversationSession | None) -> dict[str, Any]:
+    """Build context dict from conversation session.
+    
+    Args:
+        session: Conversation session or None
+        
+    Returns:
+        Context dict with summary and recent_turns
+    """
     if session is None:
         return {"summary": "", "recent_turns": []}
     return {"summary": session.summary or "", "recent_turns": list(session.recent_turns or [])}
 
 
 def update_session_context(session: ConversationSession, query_text: str, answer_text: str, trace: list[dict[str, Any]], max_turns: int = 10) -> None:
+    """Update session with new turn and regenerated summary.
+    
+    Args:
+        session: Conversation session to update
+        query_text: User query
+        answer_text: Assistant answer
+        trace: Execution trace
+        max_turns: Maximum recent turns to retain (default 10)
+    """
     recent_turns = list(session.recent_turns or [])
     recent_turns.append({"role": "user", "content": query_text})
     recent_turns.append({"role": "assistant", "content": answer_text})
@@ -46,6 +84,15 @@ def update_session_context(session: ConversationSession, query_text: str, answer
 
 
 def _summarize_memory(existing_summary: str, turns: Sequence[dict[str, Any]]) -> str:
+    """Summarize conversation turns with focus on recent queries.
+    
+    Args:
+        existing_summary: Previous session summary
+        turns: Conversation turn history
+        
+    Returns:
+        Updated summary incorporating recent turns
+    """
     if not turns:
         return existing_summary
     recent_user_messages = [turn["content"] for turn in turns if turn.get("role") == "user"][-3:]
@@ -57,6 +104,14 @@ def _summarize_memory(existing_summary: str, turns: Sequence[dict[str, Any]]) ->
 
 
 def _project_context(project: Project | None) -> dict[str, Any]:
+    """Build context dict from project.
+    
+    Args:
+        project: Project object or None
+        
+    Returns:
+        Project context dict with key metadata
+    """
     if not project:
         return {}
     return {
@@ -70,20 +125,37 @@ def _project_context(project: Project | None) -> dict[str, Any]:
 
 
 def _should_chart(query_text: str, rows: Sequence[dict[str, Any]]) -> bool:
+    """Determine if query results should be visualized as chart.
+    
+    Args:
+        query_text: User query
+        rows: Query result rows
+        
+    Returns:
+        True if charting is appropriate
+    """
     text = query_text.lower()
-    return bool(rows) and any(term in text for term in ["chart", "graph", "trend", "revenue", "latency", "queries", "analytics"])
+    return bool(rows) and any(term in text for term in CHART_KEYWORDS)
 
 
 def _extract_points(rows: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Extract numeric points from rows for charting.
+    
+    Args:
+        rows: Query result rows
+        
+    Returns:
+        List of {label, value} dicts suitable for charting
+    """
     points: list[dict[str, Any]] = []
     for index, row in enumerate(rows):
         numeric_value = None
         label = None
-        for key in ("metric_value", "value", "latency_ms", "confidence", "threshold"):
+        for key in NUMERIC_FIELD_PRIORITIES:
             if key in row and isinstance(row[key], (int, float)):
                 numeric_value = float(row[key])
                 break
-        for key in ("created_at", "observed_at", "date", "label", "metric_name", "query_text"):
+        for key in LABEL_FIELD_PRIORITIES:
             if key in row and row[key] is not None:
                 label = str(row[key])[:24]
                 break
@@ -93,14 +165,24 @@ def _extract_points(rows: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def _create_alert_from_query(query_text: str, user: User, db: Session, project_id: int | None = None) -> dict[str, Any] | None:
+    """Parse query and create alert rule if intent detected.
+    
+    Args:
+        query_text: User query
+        user: User creating the alert
+        db: Database session
+        project_id: Optional project context
+        
+    Returns:
+        Confirmation dict if alert created, None otherwise
+    """
     text = query_text.lower()
     metric = None
-    if "revenue" in text:
-        metric = "monthly_revenue"
-    elif "latency" in text:
-        metric = "avg_latency_ms"
-    elif "query" in text:
-        metric = "query_count"
+    for metric_name, keywords in METRIC_KEYWORDS.items():
+        if any(kw in text for kw in keywords):
+            metric = metric_name
+            break
+    
     if metric is None:
         return None
 
@@ -125,6 +207,21 @@ def _create_alert_from_query(query_text: str, user: User, db: Session, project_i
 
 
 def run(query: QueryRequest, user: User, db: Session, project: Project | None = None, session: ConversationSession | None = None) -> OrchestrationResult:
+    """Execute orchestrated query with multiple engines and source selection.
+    
+    Coordinates SQL, RAG, and insight engines based on query intent.
+    Optionally creates alerts, renders charts, and updates session context.
+    
+    Args:
+        query: User query request
+        user: Executing user
+        db: Database session
+        project: Optional project context
+        session: Optional conversation session
+        
+    Returns:
+        OrchestrationResult with answer, trace, confidence, and artifacts
+    """
     llm = get_llm_client()
     intent = llm.infer_intent(query.query)
     selected_sources = {source.upper() for source in (query.sources or ["SQL", "RAG", "INSIGHT"])}
