@@ -6,8 +6,22 @@ from math import sqrt
 from statistics import mean
 from typing import Any, Iterable, Sequence
 
+# Preferred numeric field names in order of preference
+PREFERRED_NUMERIC_FIELDS = [
+    "value", "metric_value", "latency_ms", "confidence",
+    "count", "total", "amount", "revenue"
+]
+
 
 def _to_float(value: Any) -> float | None:
+    """Convert value to float, handling non-numeric types.
+    
+    Args:
+        value: Value to convert
+        
+    Returns:
+        Float value or None if conversion fails
+    """
     if isinstance(value, bool):
         return None
     if isinstance(value, (int, float)):
@@ -19,7 +33,15 @@ def _to_float(value: Any) -> float | None:
 
 
 def _extract_numeric_series(rows: Sequence[dict[str, Any]]) -> tuple[str | None, list[float]]:
-    preferred_fields = ["value", "metric_value", "latency_ms", "confidence", "count", "total", "amount", "revenue"]
+    """Extract first valid numeric series from row data.
+    
+    Args:
+        rows: Sequence of data dicts
+        
+    Returns:
+        Tuple of (field_name, values) or (None, []) if no numeric series found
+    """
+    preferred_fields = PREFERRED_NUMERIC_FIELDS
     if not rows:
         return None, []
     keys = list(rows[0].keys())
@@ -40,6 +62,14 @@ def _extract_numeric_series(rows: Sequence[dict[str, Any]]) -> tuple[str | None,
 
 
 def compute_growth(series: Sequence[float]) -> float:
+    """Calculate percentage growth from first to last value.
+    
+    Args:
+        series: Sequence of numeric values
+        
+    Returns:
+        Growth percentage (0.0 if insufficient data or zero division)
+    """
     if len(series) < 2:
         return 0.0
     first = series[0]
@@ -50,6 +80,14 @@ def compute_growth(series: Sequence[float]) -> float:
 
 
 def detect_anomalies(series: Sequence[float]) -> list[dict[str, Any]]:
+    """Detect statistical anomalies using z-score method.
+    
+    Args:
+        series: Sequence of numeric values
+        
+    Returns:
+        List of anomalies with period, value, and z-score
+    """
     if len(series) < 3:
         return []
     avg = mean(series)
@@ -66,6 +104,14 @@ def detect_anomalies(series: Sequence[float]) -> list[dict[str, Any]]:
 
 
 def summarize_trend(series: Sequence[float]) -> str:
+    """Classify trend as upward, downward, or stable.
+    
+    Args:
+        series: Sequence of numeric values
+        
+    Returns:
+        Trend classification string
+    """
     if len(series) < 2:
         return "insufficient-data"
     growth = compute_growth(series)
@@ -77,6 +123,14 @@ def summarize_trend(series: Sequence[float]) -> str:
 
 
 def format_insights(results: dict[str, Any]) -> str:
+    """Format insight results as readable text.
+    
+    Args:
+        results: Insight results dict
+        
+    Returns:
+        Formatted insight string
+    """
     summary = results.get("summary")
     if summary:
         return str(summary)
@@ -89,6 +143,15 @@ def format_insights(results: dict[str, Any]) -> str:
 
 
 def run(data: Iterable[dict[str, Any]], spec: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Extract statistical insights from data.
+    
+    Args:
+        data: Iterable of data records
+        spec: Optional specification with 'summary' key
+        
+    Returns:
+        Insights dict with trend, growth_rate, anomalies, primary_field
+    """
     rows = list(data)
     field, series = _extract_numeric_series(rows)
     if not series:

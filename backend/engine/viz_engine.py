@@ -18,12 +18,42 @@ from model.schemas import TimeSeriesPoint
 
 settings = get_settings()
 
+# Chart styling constants
+CHART_WIDTH = 10
+CHART_HEIGHT = 4.8
+CHART_DPI = 160
+CHART_FACECOLOR = "white"
+CHART_BGCOLOR = "#f8fafc"
+CHART_LINE_COLOR = "#2563eb"
+CHART_LINE_WIDTH = 2.8
+CHART_FILL_ALPHA = 0.10
+CHART_TITLE_COLOR = "#0f172a"
+CHART_TITLE_SIZE = 14
+
 
 def _sanitize_filename(value: str) -> str:
+    """Sanitize string for safe filename.
+    
+    Args:
+        value: Input string
+        
+    Returns:
+        Sanitized filename-safe string
+    """
     return "".join(character for character in value if character.isalnum() or character in {"-", "_"}).strip("_") or "chart"
 
 
 def _unique_filename(title: str, points: Sequence[TimeSeriesPoint], filename: str | None = None) -> str:
+    """Generate unique filename for chart.
+    
+    Args:
+        title: Chart title
+        points: Data points
+        filename: Optional custom filename
+        
+    Returns:
+        Unique PNG filename with fingerprint
+    """
     if filename:
         raw_name = filename if filename.lower().endswith(".png") else f"{filename}.png"
         return raw_name
@@ -33,6 +63,17 @@ def _unique_filename(title: str, points: Sequence[TimeSeriesPoint], filename: st
 
 
 def render_chart(points: Sequence[TimeSeriesPoint], title: str, y_label: str = "Value", filename: str | None = None) -> str:
+    """Render time series chart and save as PNG.
+    
+    Args:
+        points: Time series data points
+        title: Chart title
+        y_label: Y-axis label
+        filename: Optional custom filename
+        
+    Returns:
+        URL path to generated chart
+    """
     chart_dir = settings.chart_dir_path
     chart_dir.mkdir(parents=True, exist_ok=True)
     output_name = _unique_filename(title, points, filename=filename)
@@ -42,14 +83,14 @@ def render_chart(points: Sequence[TimeSeriesPoint], title: str, y_label: str = "
     values = [float(point.value) for point in points] or [0.0]
     positions = list(range(len(values)))
 
-    fig, ax = plt.subplots(figsize=(10, 4.8), dpi=160)
-    fig.patch.set_facecolor("white")
-    ax.set_facecolor("#f8fafc")
-    ax.plot(positions, values, color="#2563eb", linewidth=2.8, marker="o")
-    ax.fill_between(positions, values, color="#2563eb", alpha=0.10)
+    fig, ax = plt.subplots(figsize=(CHART_WIDTH, CHART_HEIGHT), dpi=CHART_DPI)
+    fig.patch.set_facecolor(CHART_FACECOLOR)
+    ax.set_facecolor(CHART_BGCOLOR)
+    ax.plot(positions, values, color=CHART_LINE_COLOR, linewidth=CHART_LINE_WIDTH, marker="o")
+    ax.fill_between(positions, values, color=CHART_LINE_COLOR, alpha=CHART_FILL_ALPHA)
     ax.set_xticks(positions)
     ax.set_xticklabels(labels)
-    ax.set_title(title, fontsize=14, fontweight="bold", color="#0f172a")
+    ax.set_title(title, fontsize=CHART_TITLE_SIZE, fontweight="bold", color=CHART_TITLE_COLOR)
     ax.set_ylabel(y_label, color="#334155")
     ax.tick_params(axis="x", labelrotation=30, labelsize=8, colors="#475569")
     ax.tick_params(axis="y", labelsize=8, colors="#475569")
