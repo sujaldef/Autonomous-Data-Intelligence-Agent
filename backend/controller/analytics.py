@@ -6,9 +6,9 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
-from model.db_models import User
+from model.db_models import Project, User
 from model.schemas import AnalyticsSeriesResponse, AnalyticsTelemetry
-from stats.analytics_service import build_dashboard_metrics, build_time_series, resolve_metric_value
+from stats.analytics_service import build_dashboard_metrics, resolve_metric_value
 from utils.auth import get_current_user_dependency
 from utils.db import get_db
 
@@ -22,6 +22,14 @@ def _current_user_dep(token: str = Depends(oauth2_scheme), db: Session = Depends
     return get_current_user_dependency(db, token)
 
 
+def _get_user_project(db: Session, user_id: int, project_route_id: str) -> Project | None:
+    """Fetch project by route_id, ensuring user ownership. Returns None if not found."""
+    return db.query(Project).filter(
+        Project.owner_id == user_id,
+        Project.route_id == project_route_id
+    ).one_or_none()
+
+
 @router.get("/telemetry", response_model=AnalyticsTelemetry)
 def telemetry(
     db: Session = Depends(get_db),
@@ -29,12 +37,12 @@ def telemetry(
     days: int = Query(default=30, ge=1, le=365),
     project_id: str | None = Query(default=None, max_length=120),
 ) -> AnalyticsTelemetry:
-    project = None
+    project_db_id = None
     if project_id:
-        from model.db_models import Project
-
-        project = db.query(Project).filter(Project.owner_id == current_user.id, Project.route_id == project_id).one_or_none()
-    return build_dashboard_metrics(db, user_id=current_user.id, project_id=project.id if project else None, days=days)
+        project = _get_user_project(db, current_user.id, project_id)
+        if project:
+            project_db_id = project.id
+    return build_dashboard_metrics(db, user_id=current_user.id, project_id=project_db_id, days=days)
 
 
 @router.get("/series", response_model=AnalyticsSeriesResponse)
@@ -45,12 +53,12 @@ def series(
     days: int = Query(default=30, ge=1, le=365),
     project_id: str | None = Query(default=None, max_length=120),
 ) -> AnalyticsSeriesResponse:
-    project = None
+    project_db_id = None
     if project_id:
-        from model.db_models import Project
-
-        project = db.query(Project).filter(Project.owner_id == current_user.id, Project.route_id == project_id).one_or_none()
-    telemetry_payload = build_dashboard_metrics(db, user_id=current_user.id, project_id=project.id if project else None, days=days)
+        project = _get_user_project(db, current_user.id, project_id)
+        if project:
+            project_db_id = project.id
+    telemetry_payload = build_dashboard_metrics(db, user_id=current_user.id, project_id=project_db_id, days=days)
     points = telemetry_payload.series.get(metric_name, [])
     return AnalyticsSeriesResponse(series_name=metric_name, points=points)
 
