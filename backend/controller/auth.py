@@ -34,7 +34,8 @@ def signup(payload: SignupRequest, db: Session = Depends(get_db)) -> AuthRespons
         role="user",
     )
     db.add(user)
-    db.flush()
+    db.commit()
+    db.refresh(user)
     token = create_access_token(subject=str(user.id), claims={"email": user.email, "role": user.role})
     return AuthResponse(access_token=token, user=UserRead.model_validate(user))
 
