@@ -1,6 +1,57 @@
-import React, { useRef } from 'react';
+import React, { useRef, useMemo, useCallback } from 'react';
 import { motion, useScroll, useTransform, useSpring } from 'framer-motion';
 import { Globe, Code2, Terminal, Lock, Cpu } from 'lucide-react';
+
+// Memoized Layer Card Component
+const LayerCard = React.memo(({ layer, rotate, rotateX }) => {
+  const angleInRadians = useMemo(() => {
+    const layerIndex = ['API Gateway', 'Agent Layer', 'Tool Layer', 'Data Layer'].indexOf(
+      layer.title
+    );
+    return layerIndex * 90 * (Math.PI / 180);
+  }, [layer.title]);
+
+  const x = Math.cos(angleInRadians) * 225;
+  const y = Math.sin(angleInRadians) * 225;
+
+  return (
+    <motion.div
+      style={{
+        x,
+        y,
+        transformStyle: 'preserve-3d',
+      }}
+      className="absolute"
+    >
+      <motion.div
+        style={{
+          rotate: useTransform(rotate, (r) => -r),
+          rotateX: useTransform(rotateX, (r) => -r),
+        }}
+        className="group relative flex flex-col items-center"
+      >
+        <div className="bg-app-strong border border-white/10 backdrop-blur-xl p-6 w-40 h-40 flex flex-col justify-between transition-all duration-500 group-hover:border-[#98465f]/50 group-hover:bg-[#0a0a0c]">
+          <div className="text-[#98465f] group-hover:scale-110 transition-transform duration-500">
+            {layer.icon}
+          </div>
+
+          <div>
+            <h4 className="text-strong text-[10px] font-bold tracking-[0.2em] uppercase mb-1">
+              {layer.title}
+            </h4>
+            <p className="text-[9px] text-muted uppercase tracking-widest">
+              {layer.tech}
+            </p>
+          </div>
+
+          <div className="absolute top-0 right-0 w-4 h-4 border-t border-r border-white/5 group-hover:border-[#98465f] transition-colors" />
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+});
+
+LayerCard.displayName = 'LayerCard';
 
 const Modular = () => {
   const containerRef = useRef(null);
@@ -25,32 +76,36 @@ const Modular = () => {
   // 3D Tilt for the main engine
   const rotateX = useTransform(smoothProgress, [0, 1], [15, -15]);
 
-  const layers = [
-    {
-      icon: <Globe size={20} strokeWidth={1} />,
-      title: 'API Gateway',
-      tech: 'Edge Routing',
-      pos: 'top',
-    },
-    {
-      icon: <Code2 size={20} strokeWidth={1} />,
-      title: 'Agent Layer',
-      tech: 'ReAct Loop',
-      pos: 'right',
-    },
-    {
-      icon: <Terminal size={20} strokeWidth={1} />,
-      title: 'Tool Layer',
-      tech: 'Python Exec',
-      pos: 'bottom',
-    },
-    {
-      icon: <Lock size={20} strokeWidth={1} />,
-      title: 'Data Layer',
-      tech: 'Vector DB',
-      pos: 'left',
-    },
-  ];
+  // Memoized layers array to prevent unnecessary recreations
+  const layers = useMemo(
+    () => [
+      {
+        icon: <Globe size={20} strokeWidth={1} />,
+        title: 'API Gateway',
+        tech: 'Edge Routing',
+        pos: 'top',
+      },
+      {
+        icon: <Code2 size={20} strokeWidth={1} />,
+        title: 'Agent Layer',
+        tech: 'ReAct Loop',
+        pos: 'right',
+      },
+      {
+        icon: <Terminal size={20} strokeWidth={1} />,
+        title: 'Tool Layer',
+        tech: 'Python Exec',
+        pos: 'bottom',
+      },
+      {
+        icon: <Lock size={20} strokeWidth={1} />,
+        title: 'Data Layer',
+        tech: 'Vector DB',
+        pos: 'left',
+      },
+    ],
+    []
+  );
 
   return (
     <section
@@ -90,6 +145,7 @@ const Modular = () => {
             to ensure zero-hallucination outputs.
           </p>
 
+          {/* Tech Stack Tags */}
           <div className="flex flex-wrap gap-3">
             {['FastAPI', 'LangChain', 'FAISS', 'SQLite'].map((tech) => (
               <span
@@ -98,6 +154,9 @@ const Modular = () => {
               >
                 {tech}
               </span>
+            ))}
+          </div>
+        </motion.div>
             ))}
           </div>
         </motion.div>
@@ -119,52 +178,10 @@ const Modular = () => {
             {/* Dashed Orbit Line */}
             <div className="absolute inset-0 border border-dashed border-white/10 rounded-full" />
 
-            {layers.map((layer, i) => {
-              const angle = i * 90 * (Math.PI / 180);
-              // Calculate positioning
-              const x = Math.cos(angle) * 225;
-              const y = Math.sin(angle) * 225;
-
-              return (
-                <motion.div
-                  key={i}
-                  style={{
-                    x,
-                    y,
-                    transformStyle: 'preserve-3d',
-                  }}
-                  className="absolute"
-                >
-                  {/* Item Container - Counters parent rotation to stay upright */}
-                  <motion.div
-                    style={{
-                      rotate: useTransform(rotate, (r) => -r),
-                      rotateX: useTransform(rotateX, (r) => -r),
-                    }}
-                    className="group relative flex flex-col items-center"
-                  >
-                    {/* The Card */}
-                    <div className="bg-app-strong border border-white/10 backdrop-blur-xl p-6 w-40 h-40 flex flex-col justify-between transition-all duration-500 group-hover:border-[#98465f]/50 group-hover:bg-[#0a0a0c]">
-                      <div className="text-[#98465f] group-hover:scale-110 transition-transform duration-500">
-                        {layer.icon}
-                      </div>
-
-                      <div>
-                        <h4 className="text-strong text-[10px] font-bold tracking-[0.2em] uppercase mb-1">
-                          {layer.title}
-                        </h4>
-                        <p className="text-[9px] text-muted uppercase tracking-widest">
-                          {layer.tech}
-                        </p>
-                      </div>
-
-                      {/* Corner Accent */}
-                      <div className="absolute top-0 right-0 w-4 h-4 border-t border-r border-white/5 group-hover:border-[#98465f] transition-colors" />
-                    </div>
-                  </motion.div>
-                </motion.div>
-              );
-            })}
+            {/* Layer Cards */}
+            {layers.map((layer, i) => (
+              <LayerCard key={layer.title} layer={layer} rotate={rotate} rotateX={rotateX} />
+            ))}
 
             {/* Central Core Element */}
             <motion.div
@@ -188,4 +205,4 @@ const Modular = () => {
   );
 };
 
-export default Modular;
+export default React.memo(Modular);
