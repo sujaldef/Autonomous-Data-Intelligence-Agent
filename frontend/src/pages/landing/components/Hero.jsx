@@ -1,12 +1,19 @@
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight, ShieldCheck } from 'lucide-react';
 import WaveField from './WaveField';
+
 const Hero = () => {
   const navigate = useNavigate();
   const { scrollYProgress } = useScroll();
 
+  // Memoized navigation handler
+  const handleNavigate = useCallback(() => {
+    navigate('/auth');
+  }, [navigate]);
+
+  // Memoized scroll transforms
   const leftSideOpacity = useTransform(scrollYProgress, [0, 0.12], [1, 0]);
   const leftSideX = useTransform(scrollYProgress, [0, 0.12], [0, -40]);
 
@@ -53,7 +60,7 @@ const Hero = () => {
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-12">
           <button
-            onClick={() => navigate('/auth')}
+            onClick={handleNavigate}
             className="group relative flex items-center gap-6 bg-white px-12 py-6 overflow-hidden transition-all duration-500"
           >
             <span className="relative z-10 text-black group-hover:text-white text-[11px] font-bold uppercase tracking-[0.4em]">
@@ -82,4 +89,4 @@ const Hero = () => {
   );
 };
 
-export default Hero;
+export default React.memo(Hero);
