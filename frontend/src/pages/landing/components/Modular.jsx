@@ -157,9 +157,6 @@ const Modular = () => {
             ))}
           </div>
         </motion.div>
-            ))}
-          </div>
-        </motion.div>
 
         {/* THE VISUAL ENGINE */}
         <div className="relative flex justify-center items-center h-[700px] perspective-[1500px]">

@@ -2,18 +2,23 @@ import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Fingerprint, Zap, ArrowRight } from 'lucide-react';
 
+const seededUnit = (seed) => {
+  const x = Math.sin(seed * 12.9898) * 43758.5453;
+  return x - Math.floor(x);
+};
+
 const End = () => {
-  // UseMemo prevents stars from repositioning on every hover/render
+  // Stable seeded values keep visuals varied without impure render-time randomness.
   const starField = useMemo(
     () =>
       Array.from({ length: 40 }).map((_, i) => ({
         id: i,
-        size: Math.random() * 2 + 1, // small to large
-        top: `${Math.random() * 80}%`,
-        right: `${-10 - Math.random() * 30}%`,
-        duration: 1.5 + Math.random() * 3,
-        delay: Math.random() * 8,
-        opacity: Math.random() * 0.7 + 0.3,
+        size: seededUnit(i + 1) * 2 + 1,
+        top: `${seededUnit((i + 1) * 2) * 80}%`,
+        right: `${-10 - seededUnit((i + 1) * 3) * 30}%`,
+        duration: 1.5 + seededUnit((i + 1) * 4) * 3,
+        delay: seededUnit((i + 1) * 5) * 8,
+        opacity: seededUnit((i + 1) * 6) * 0.7 + 0.3,
       })),
     [],
   );
