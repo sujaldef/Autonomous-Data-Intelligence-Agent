@@ -14,11 +14,20 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          router: ['react-router-dom'],
-          three: ['three', '@react-three/fiber', '@react-three/drei'],
-          motion: ['framer-motion'],
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return;
+          if (id.includes('react-router-dom')) return 'router';
+          if (
+            id.includes('/three/') ||
+            id.includes('@react-three/fiber') ||
+            id.includes('@react-three/drei')
+          ) {
+            return 'three';
+          }
+          if (id.includes('framer-motion')) return 'motion';
+          if (id.includes('/react/') || id.includes('/react-dom/')) {
+            return 'vendor';
+          }
         },
       },
     },
