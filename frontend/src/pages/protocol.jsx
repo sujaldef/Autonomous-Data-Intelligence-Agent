@@ -15,18 +15,25 @@ import {
 import { Link } from 'react-router-dom';
 import NavForLanding from '../components/navforlanding';
 
+const seededUnit = (seed) => {
+  const x = Math.sin(seed * 12.9898) * 43758.5453;
+  return x - Math.floor(x);
+};
+
 // ─── SUBTLE SHOOTING STARS ──────────────────────────────────────────────────
-const ShootingStar = () => {
+const ShootingStar = ({ seed }) => {
   const ref = useRef();
-  // Randomize characteristics for a natural feel
-  const config = useMemo(() => ({
-    x: (Math.random() - 0.5) * 50,
-    y: 15 + Math.random() * 10,
-    z: (Math.random() - 0.5) * 20,
-    speed: 0.03 + Math.random() * 0.04, // Much slower and subtle
-    length: 10 + Math.random() * 20,
-    delay: Math.random() * 5,
-  }), []);
+  const config = useMemo(
+    () => ({
+      x: (seededUnit(seed + 1) - 0.5) * 50,
+      y: 15 + seededUnit(seed + 2) * 10,
+      z: (seededUnit(seed + 3) - 0.5) * 20,
+      speed: 0.03 + seededUnit(seed + 4) * 0.04,
+      length: 10 + seededUnit(seed + 5) * 20,
+      delay: seededUnit(seed + 6) * 5,
+    }),
+    [seed]
+  );
 
   useFrame((state) => {
     if (!ref.current) return;
@@ -85,10 +92,10 @@ const GalaxyCore = () => {
       />
       
       {/* Several shooting stars with different timings */}
-      <ShootingStar />
-      <ShootingStar />
-      <ShootingStar />
-      <ShootingStar />
+      <ShootingStar seed={1} />
+      <ShootingStar seed={2} />
+      <ShootingStar seed={3} />
+      <ShootingStar seed={4} />
     </group>
   );
 };
