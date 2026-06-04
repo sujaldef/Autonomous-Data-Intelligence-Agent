@@ -25,7 +25,7 @@ function NavForLanding() {
   }, []);
 
   const toggleMobileMenu = useCallback(() => {
-    setMobileMenuOpen(prev => !prev);
+    setMobileMenuOpen((prev) => !prev);
   }, []);
 
   const closeMobileMenu = useCallback(() => {
@@ -45,12 +45,12 @@ function NavForLanding() {
         <Link to="/" className="flex items-center gap-3 group">
           <div className="relative">
             <Fingerprint
-              className="text-[#98465f] w-6 h-6 transition-transform group-hover:scale-110"
+              className="text-[#091413] w-6 h-6 transition-transform group-hover:scale-110"
               strokeWidth={1.5}
             />
             <motion.div
               animate={pulseAnimation}
-              className="absolute -top-1 -right-1 w-1.5 h-1.5 bg-[#98465f] rounded-full"
+              className="absolute -top-1 -right-1 w-1.5 h-1.5 bg-[#091413] rounded-full"
             />
           </div>
           <span className="text-white text-sm font-bold tracking-[0.4em] uppercase">
@@ -68,7 +68,7 @@ function NavForLanding() {
                 className="text-[10px] uppercase tracking-[0.3em] text-slate-400 hover:text-white transition-colors relative group"
               >
                 {link.name}
-                <span className="absolute -bottom-1 left-0 w-0 h-px bg-[#98465f] transition-all group-hover:w-full" />
+                <span className="absolute -bottom-1 left-0 w-0 h-px bg-[#091413] transition-all group-hover:w-full" />
               </Link>
             ))}
           </div>
@@ -84,7 +84,7 @@ function NavForLanding() {
             >
               <Activity
                 size={12}
-                className="text-[#98465f] group-hover:text-black animate-pulse"
+                className="text-[#091413] group-hover:text-black animate-pulse"
               />
               <span className="text-[9px] font-bold uppercase tracking-[0.3em] text-white group-hover:text-black">
                 {location.pathname === '/auth'
@@ -126,7 +126,7 @@ function NavForLanding() {
         <Link
           to="/auth"
           onClick={closeMobileMenu}
-          className="mt-4 px-10 py-4 bg-[#98465f] text-white text-xs tracking-[0.4em] uppercase"
+          className="mt-4 px-10 py-4 bg-[#091413] text-white text-xs tracking-[0.4em] uppercase"
         >
           Initialize
         </Link>

@@ -19,13 +19,13 @@ function GlobalLoader() {
         }}
       />
       <div className="flex flex-col items-center gap-4 relative z-10">
-        <Cpu size={32} className="text-[#98465f] animate-pulse" />
+        <Cpu size={32} className="text-[#091413] animate-pulse" />
         <div className="flex flex-col items-center gap-2">
-          <p className="text-xs uppercase tracking-[0.3em] text-[#98465f] font-bold">
+          <p className="text-xs uppercase tracking-[0.3em] text-[#091413] font-bold">
             Initializing
           </p>
           <div className="h-1 w-32 bg-white/5 overflow-hidden">
-            <div className="h-full bg-[#98465f] w-1/3 animate-[slide_1.5s_ease-in-out_infinite]" />
+            <div className="h-full bg-[#091413] w-1/3 animate-[slide_1.5s_ease-in-out_infinite]" />
           </div>
         </div>
       </div>

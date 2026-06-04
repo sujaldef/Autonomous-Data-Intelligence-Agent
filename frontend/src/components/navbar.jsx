@@ -3,8 +3,8 @@ import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, FolderKanban, Cpu, User } from 'lucide-react';
 
 const navItems = [
-  { to: '/dashboard', label: 'CONSOLE', icon: LayoutDashboard },
-  { to: '/projects', label: 'WORKSPACES', icon: FolderKanban },
+  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/projects', label: 'Projects', icon: FolderKanban },
 ];
 
 function Navbar() {
@@ -14,10 +14,8 @@ function Navbar() {
         {/* LOGO & NAV GROUPED LEFT */}
         <div className="flex items-center gap-12">
           <NavLink to="/" className="flex items-center gap-3">
-            <Cpu size={16} className="text-[#98465f]" />
-            <span className="text-[10px] tracking-[0.4em] text-white font-bold uppercase">
-              ADIA
-            </span>
+            <Cpu size={18} className="text-[#091413]" />
+            <span className="text-lg font-bold text-white">ADIA</span>
           </NavLink>
 
           <nav className="flex items-center gap-1">
@@ -43,9 +41,7 @@ function Navbar() {
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2">
             <div className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse" />
-            <span className="text-[9px] text-muted tracking-widest uppercase font-mono">
-              SYS_OK
-            </span>
+            <span className="text-sm text-slate-400">Online</span>
           </div>
           <button className="h-7 w-7 border border-white/10 flex items-center justify-center text-muted hover:text-white transition-colors">
             <User size={14} />
