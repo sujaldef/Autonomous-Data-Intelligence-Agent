@@ -1,29 +1,83 @@
 @import 'tailwindcss';
 
+/* =======================================================
+   ADIA DESIGN SYSTEM
+   Premium Business Dashboard Theme
+   ======================================================= */
+
 :root {
   color-scheme: dark;
 
-  /* BASE */
-  --bg: #0d0d12;
-  --bg-elevated: #16161b;
-  --bg-panel: rgba(28, 28, 36, 0.75);
-  --bg-panel-strong: rgba(18, 18, 22, 0.95);
+  /* =======================================================
+     SURFACES
+     ======================================================= */
 
-  /* TEXT */
-  --text: #f4f4f5;
+  --bg: #0f1117;
+  --bg-elevated: #171923;
+  --bg-hover: #1d2030;
+
+  --bg-panel: rgba(23, 25, 35, 0.92);
+  --bg-panel-strong: rgba(23, 25, 35, 0.98);
+
+  /* =======================================================
+     TEXT
+     ======================================================= */
+
+  --text: #e5e7eb;
   --text-strong: #ffffff;
-  --muted: #d4d4d8;
 
-  /* ACCENT */
+  --muted: #94a3b8;
+  --muted-soft: #64748b;
+
+  /* =======================================================
+     BRAND
+     ======================================================= */
+
   --accent: #98465f;
-  --accent-soft: rgba(152, 70, 95, 0.18);
-  --accent-glow: rgba(152, 70, 95, 0.35);
+  --accent-hover: #b45d79;
 
-  /* BORDER */
+  --accent-soft: rgba(152, 70, 95, 0.12);
+  --accent-glow: rgba(152, 70, 95, 0.24);
+
+  /* =======================================================
+     STATUS
+     ======================================================= */
+
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #3b82f6;
+
+  /* =======================================================
+     BORDERS
+     ======================================================= */
+
   --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.12);
 
-  /* SHADOW */
-  --shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  /* =======================================================
+     SHADOWS
+     ======================================================= */
+
+  --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.18);
+
+  --shadow:
+    0 20px 50px rgba(0, 0, 0, 0.45);
+
+  --shadow-lg:
+    0 30px 80px rgba(0, 0, 0, 0.6);
+
+  /* =======================================================
+     RGB HELPERS
+     ======================================================= */
+
+  --bg-rgb: 15, 17, 23;
+  --bg-strong-rgb: 23, 25, 35;
+  --accent-rgb: 152, 70, 95;
+
+  /* =======================================================
+     TYPOGRAPHY
+     ======================================================= */
 
   font-family:
     Inter,
@@ -35,68 +89,100 @@
     sans-serif;
 }
 
-/* RGB helpers for opacity utilities */
-:root {
-  --bg-rgb: 13, 13, 18; /* #0d0d12 */
-  --bg-strong-rgb: 22, 22, 27; /* #16161b */
-  --accent-rgb: 152, 70, 95; /* #98465f */
-}
+/* =======================================================
+   SURFACE UTILITIES
+   ======================================================= */
 
-/* App-level utility classes that reference variables for easy theming */
 .bg-app {
   background-color: var(--bg) !important;
 }
+
 .bg-app-strong {
   background-color: var(--bg-elevated) !important;
 }
+
+.bg-app-hover {
+  background-color: var(--bg-hover) !important;
+}
+
 .bg-app-80 {
   background-color: rgba(var(--bg-rgb), 0.8) !important;
 }
+
 .bg-app-30 {
   background-color: rgba(var(--bg-rgb), 0.3) !important;
 }
+
 .bg-panel {
   background-color: var(--bg-panel) !important;
+  backdrop-filter: blur(12px);
 }
+
 .bg-panel-strong {
   background-color: var(--bg-panel-strong) !important;
 }
 
+/* =======================================================
+   TEXT UTILITIES
+   ======================================================= */
+
 .text-ui {
   color: var(--text) !important;
 }
+
 .text-muted {
   color: var(--muted) !important;
 }
+
+.text-muted-soft {
+  color: var(--muted-soft) !important;
+}
+
 .text-strong {
   color: var(--text-strong) !important;
 }
 
+/* =======================================================
+   FONT UTILITIES
+   ======================================================= */
+
 .font-satoshi {
   font-family: 'Satoshi', sans-serif !important;
+}
+
+/* =======================================================
+   INTERACTIONS
+   ======================================================= */
+
+.hover-bg-app:hover {
+  background-color: var(--bg-hover) !important;
 }
 
 .hover-bg-app-strong:hover {
   background-color: var(--bg-elevated) !important;
 }
 
-.hover-bg-app:hover {
-  background-color: var(--bg) !important;
+.hover-border:hover {
+  border-color: var(--border-strong) !important;
 }
 
-.selection-accent::selection {
-  background: rgba(var(--accent-rgb), 0.28);
-  color: var(--text-strong);
-}
+/* =======================================================
+   PILLS / BADGES
+   ======================================================= */
 
-/* Utility for small pill backgrounds that used #050507 */
 .pill-bg {
-  background-color: var(--bg) !important;
+  background-color: var(--bg-elevated);
   border: 1px solid var(--border);
+  border-radius: 9999px;
 }
+
+/* =======================================================
+   GLOBALS
+   ======================================================= */
 
 html {
   background: var(--bg);
+  scroll-behavior: smooth;
 }
 
 body {
@@ -104,15 +190,12 @@ body {
   min-height: 100vh;
   background: transparent;
   color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 #root {
   min-height: 100vh;
-}
-
-::selection {
-  background: rgba(var(--accent-rgb), 0.28);
-  color: var(--text-strong);
 }
 
 a {
@@ -122,32 +205,59 @@ a {
 
 button,
 input,
-textarea {
+textarea,
+select {
   font: inherit;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* =======================================================
+   SELECTION
+   ======================================================= */
+
+::selection {
+  background: rgba(var(--accent-rgb), 0.28);
+  color: var(--text-strong);
 }
+
+/* =======================================================
+   SCROLLBAR
+   ======================================================= */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
 ::-webkit-scrollbar-track {
   background: var(--bg);
 }
+
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid var(--border);
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
 }
 
-/* Add this to your Global CSS */
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* =======================================================
+   HERO MESH
+   ======================================================= */
+
 .hero-mesh {
   background-color: var(--bg);
   background-image:
-    radial-gradient(at 0% 0%, var(--accent-soft) 0, transparent 50%),
-    radial-gradient(at 50% 0%, rgba(6, 182, 212, 0.05) 0, transparent 50%);
+    radial-gradient(
+      at 0% 0%,
+      var(--accent-soft) 0,
+      transparent 50%
+    ),
+    radial-gradient(
+      at 100% 0%,
+      rgba(59, 130, 246, 0.05) 0,
+      transparent 45%
+    );
   position: relative;
 }
 
@@ -155,8 +265,51 @@ textarea {
   content: '';
   position: absolute;
   inset: 0;
-  /* This creates a high-end "dotted" grid look */
-  background-image: radial-gradient(var(--border) 1px, transparent 1px);
+
+  background-image:
+    radial-gradient(
+      rgba(255, 255, 255, 0.05) 1px,
+      transparent 1px
+    );
+
   background-size: 40px 40px;
-  mask-image: radial-gradient(ellipse at center, black, transparent 80%);
+
+  mask-image:
+    radial-gradient(
+      ellipse at center,
+      black,
+      transparent 85%
+    );
+
+  pointer-events: none;
+}
+
+/* =======================================================
+   CARD HELPERS
+   ======================================================= */
+
+.card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.card-hover:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+  transition: all 0.2s ease;
+}
+
+/* =======================================================
+   FOCUS STATES
+   ======================================================= */
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 3px rgba(var(--accent-rgb), 0.15);
 }
