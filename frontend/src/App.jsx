@@ -1,3 +1,4 @@
+import React, { Suspense, lazy, memo } from 'react';
 import {
   BrowserRouter,
   Routes,
@@ -5,28 +6,37 @@ import {
   useLocation,
   Navigate,
 } from 'react-router-dom';
-import Landing from './pages/landing';
-import LoginSignup from './pages/login_signup';
-import Dashboard from './pages/dashboard';
-import ProjectLayout from './pages/projects/sidebar';
-import QueryPage from './pages/projects/querry';
-import HistoryPage from './pages/projects/history';
-import AnalyticsPage from './pages/projects/analytics';
-import NotificationsPage from './pages/projects/notifications';
-import Navbar from './components/navbar';
+import ScrollToTop from './components/ScrollToTop';
+import GlobalLoader from './components/GlobalLoader';
+
+const Landing = lazy(() => import('./pages/landing/landing'));
+const LoginSignup = lazy(() => import('./pages/login_signup'));
+const Dashboard = lazy(() => import('./pages/dashboard'));
+const ProjectLayout = lazy(() => import('./pages/projects/sidebar'));
+const QueryPage = lazy(() => import('./pages/projects/querry'));
+const HistoryPage = lazy(() => import('./pages/projects/history'));
+const AnalyticsPage = lazy(() => import('./pages/projects/analytics'));
+const NotificationsPage = lazy(() => import('./pages/projects/notifications'));
+
+const Architecture = lazy(() => import('./pages/architecture'));
+const Protocol = lazy(() => import('./pages/protocol'));
+const Docs = lazy(() => import('./pages/docs'));
 
 function AppShell() {
   const { pathname } = useLocation();
-  const showNavbar = pathname !== '/' && !pathname.startsWith('/auth');
 
   return (
-    <>
-      {showNavbar ? <Navbar /> : null}
+    <Suspense fallback={<GlobalLoader />}>
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/auth" element={<LoginSignup />} />
+        <Route path="/architecture" element={<Architecture />} />
+        <Route path="/protocol" element={<Protocol />} />
+        <Route path="/docs" element={<Docs />} />
+
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/projects/:projectId" element={<ProjectLayout />}>
+
+        <Route path="/projects" element={<ProjectLayout />}>
           <Route index element={<Navigate to="query" replace />} />
           <Route path="query" element={<QueryPage />} />
           <Route path="history" element={<HistoryPage />} />
@@ -34,14 +44,17 @@ function AppShell() {
           <Route path="notifications" element={<NotificationsPage />} />
         </Route>
       </Routes>
-    </>
+    </Suspense>
   );
 }
+
+const MemoizedAppShell = memo(AppShell);
 
 function App() {
   return (
     <BrowserRouter>
-      <AppShell />
+      <ScrollToTop />
+      <MemoizedAppShell />
     </BrowserRouter>
   );
 }
