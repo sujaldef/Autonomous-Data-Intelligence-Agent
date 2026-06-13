@@ -1,0 +1,176 @@
+User Model
+Table users {
+  id string [pk]
+
+  name string
+  email string [unique]
+
+  password_hash string
+
+  avatar_url string
+
+  project_ids json
+
+  created_at timestamp
+}
+
+Project Model
+Table projects {
+  id string [pk]
+
+  owner_id string [ref: > users.id]
+
+  name string
+
+  description text
+
+  status string
+
+  data_sources json
+
+  created_at timestamp
+
+  updated_at timestamp
+}
+
+Query Model (The Main Model)
+
+This becomes the heart of ADIA.
+
+Table queries {
+  id string [pk]
+
+  project_id string [ref: > projects.id]
+
+  user_id string [ref: > users.id]
+
+  question text
+
+  status string
+
+  ai_response text
+
+  executive_summary text
+
+  confidence_score float
+
+  sources_used json
+
+  insights json
+
+  recommendations json
+
+  charts json
+
+  follow_up_questions json
+
+  created_at timestamp
+}
+example 
+{
+  _id,
+
+  projectId,
+
+  userId,
+
+  question:
+    "Why did revenue drop last month?",
+
+  status:"completed",
+
+  executiveSummary:
+    "Revenue decreased 6.2%",
+
+  aiResponse:
+    "Detailed explanation....",
+
+  confidenceScore:0.91,
+
+  sourcesUsed:[
+    {
+      source:"Sales Database",
+      confidence:0.94
+    },
+    {
+      source:"Customer Feedback",
+      confidence:0.88
+    }
+  ],
+
+  insights:[
+    {
+      title:"Electronics decline",
+      description:"24% decrease"
+    },
+    {
+      title:"West region weakness",
+      description:"18% decrease"
+    }
+  ],
+
+  recommendations:[
+    {
+      title:"Increase promotion",
+      impact:"+6%"
+    },
+    {
+      title:"Review pricing"
+    }
+  ],
+
+  charts:[
+    {
+      type:"line",
+      title:"Revenue Trend",
+      data:[]
+    }
+  ],
+
+  followUps:[
+    "Which products caused the decline?",
+    "Show regional breakdown"
+  ],
+
+  createdAt
+}
+
+
+
+Alert Model
+
+Separate because alerts are independent.
+
+Table alerts {
+  id string [pk]
+
+  project_id string
+
+  name string
+
+  condition text
+
+  severity string
+
+  enabled boolean
+
+  created_at timestamp
+}
+Documents Model
+
+Only for RAG.
+
+Table documents {
+  id string [pk]
+
+  project_id string
+
+  filename string
+
+  type string
+
+  embedding_status string
+
+  uploaded_at timestamp
+}
+

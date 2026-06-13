@@ -1,4 +1,4 @@
-ADIA Backend Implementation Guide and Frontend Integration Audit
+`ADIA Backend Implementation Guide and Frontend Integration Audit
 
 Status of the current repository:
 - The frontend is present and renders multiple project views, but it is currently UI-only.
