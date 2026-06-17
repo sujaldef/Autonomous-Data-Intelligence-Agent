@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from model.db_models import Base
 from config import get_settings
@@ -40,7 +40,7 @@ def ping_database() -> dict:
     """Cheap connectivity check for readiness/health check."""
     try:
         db = SessionLocal()
-        db.execute(Base.metadata.schema_check_select_1() if hasattr(Base.metadata, "schema_check_select_1") else "SELECT 1")
+        db.execute(Base.metadata.schema_check_select_1() if hasattr(Base.metadata, "schema_check_select_1") else text("SELECT 1"))
         db.close()
         return {"database": "connected"}
     except Exception as e:

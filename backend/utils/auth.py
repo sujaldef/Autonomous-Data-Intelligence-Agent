@@ -37,9 +37,13 @@ def create_access_token(subject: Union[str, int], expires_delta: timedelta = Non
     to_encode = {"exp": expire, "sub": str(subject)}
     encoded_jwt = jwt.encode(to_encode, settings.jwt_secret, algorithm=settings.jwt_algorithm)
     return encoded_jwt
+def get_db_session():
+    """Helper to lazily fetch database session generator and avoid circular dependencies."""
+    from utils.db import get_db
+    yield from get_db()
 
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(lambda: next(get_db_session()))) -> Any:
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db_session)) -> Any:
     """Dependency validator to parse and retrieve the current authenticated User."""
     from model.db_models import User
     
@@ -64,7 +68,3 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     return user
 
 
-def get_db_session():
-    """Helper to lazily fetch database session generator and avoid circular dependencies."""
-    from utils.db import get_db
-    return get_db()
