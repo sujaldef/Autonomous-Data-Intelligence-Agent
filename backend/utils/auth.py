@@ -45,7 +45,7 @@ def get_db_session():
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db_session)) -> Any:
     """Dependency validator to parse and retrieve the current authenticated User."""
-    from model.db_models import User
+    from backend.engine.db_models import User
     
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,

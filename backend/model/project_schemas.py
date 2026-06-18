@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import List, Optional
 from pydantic import BaseModel, Field
 
-from .base_schemas import ORMModel
+from ..engine.base_schemas import ORMModel
 
 
 class ProjectSummary(ORMModel):

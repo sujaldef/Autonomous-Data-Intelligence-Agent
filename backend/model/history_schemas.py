@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import List, Optional
 from pydantic import BaseModel
 
-from .base_schemas import ORMModel
+from ..engine.base_schemas import ORMModel
 
 
 class HistoryItem(ORMModel):

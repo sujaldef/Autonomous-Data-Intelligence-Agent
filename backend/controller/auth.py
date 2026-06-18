@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from model.schemas import SignupRequest, LoginRequest, AuthResponse, CurrentUserResponse, UserRead
-from model.db_models import User
+from backend.engine.db_models import User
 from utils.db import get_db
 from utils.auth import hash_password, verify_password, create_access_token, get_current_user
 

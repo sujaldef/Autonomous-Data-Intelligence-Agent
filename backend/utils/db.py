@@ -1,11 +1,11 @@
-"""Database setup, engine configurations, and seeding utilities."""
+
 
 from __future__ import annotations
 
 import logging
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
-from model.db_models import Base
+from backend.engine.db_models import Base
 from config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -50,7 +50,7 @@ def ping_database() -> dict:
 
 def seed_development_data():
     """Seed initial development users and sample projects."""
-    from model.db_models import User, Project
+    from backend.engine.db_models import User, Project
     from utils.auth import hash_password
     
     db = SessionLocal()

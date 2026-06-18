@@ -6,7 +6,7 @@ in specialized sub-modules within the model folder.
 
 from __future__ import annotations
 
-from .base_schemas import (
+from ..engine.base_schemas import (
     ORMModel,
     EmailNormalizationMixin,
     OperatorValidationMixin,
@@ -17,7 +17,7 @@ from .system_schemas import (
     ReadinessResponse,
     GenericErrorResponse,
 )
-from .auth_schemas import (
+from ..engine.auth_schemas import (
     UserRead,
     SignupRequest,
     LoginRequest,
@@ -41,7 +41,7 @@ from .history_schemas import (
     HistoryItem,
     HistoryResponse,
 )
-from .analytics_schemas import (
+from ..engine.analytics_schemas import (
     MetricCard,
     SourceMixItem,
     TimeSeriesPoint,

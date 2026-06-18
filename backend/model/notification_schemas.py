@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import List, Optional
 from pydantic import BaseModel, Field, field_validator
 
-from .base_schemas import ORMModel, OperatorValidationMixin
+from ..engine.base_schemas import ORMModel, OperatorValidationMixin
 
 
 class AlertRuleCreate(BaseModel):

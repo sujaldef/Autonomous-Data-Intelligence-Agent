@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
 from model.schemas import HistoryResponse, HistoryItem
-from model.db_models import User, QueryLog, Project
+from backend.engine.db_models import User, QueryLog, Project
 from utils.db import get_db
 from utils.auth import get_current_user
 

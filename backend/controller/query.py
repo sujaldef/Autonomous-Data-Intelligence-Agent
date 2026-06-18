@@ -10,7 +10,7 @@ from model.schemas import (
     ProjectListResponse, ProjectSummary, ProjectDetailResponse, ProjectDetail,
     SourceListResponse, SourceOption
 )
-from model.db_models import User, Project, QueryLog
+from backend.engine.db_models import User, Project, QueryLog
 from utils.db import get_db
 from utils.auth import get_current_user
 from engine.orchestrator import AgentOrchestrator

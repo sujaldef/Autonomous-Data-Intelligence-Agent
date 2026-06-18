@@ -12,7 +12,7 @@ from model.schemas import (
 )
 from utils.db import get_db
 from utils.auth import get_current_user
-from model.db_models import User, AlertRule, NotificationLog
+from backend.engine.db_models import User, AlertRule, NotificationLog
 
 router = APIRouter(prefix="/api/notifications", tags=["notifications"])
 
